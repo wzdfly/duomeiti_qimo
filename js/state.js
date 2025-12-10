@@ -2,7 +2,7 @@
 // 文件作用：声明各页面/游戏逻辑用到的全局状态变量
 
 let startButton = null;                                // 主页面“开始游戏”按钮实例
-let achievementsButton = null;                         // 主页面“个人成就”按钮实例
+let achievementsButton = null;                         // 主页面“关卡”按钮实例
 let backButton = null;                                 // 成就页“返回”按钮实例
 let clearRecordsButton = null;                         // 成就页“清除记录”按钮实例
 
@@ -24,6 +24,7 @@ let startIntroPhase = 'idle';                           // 开场场景阶段：
 let startIntroAnimationId = null;                      // 开场动画循环的 RAF 句柄
 let rocketSprite = null;                               // 烟花火箭精灵
 let particleSprites = [];                              // 爆炸粒子精灵数组
+let firstIntroPlayed = false;                          // 开场烟花是否已播放过
 
 let gridNumbers = [];                                  // 游戏网格数字 1..25（打乱）
 let cellStates = [];                                   // 格子状态：0默认/1正确/2错误
@@ -35,3 +36,14 @@ let gameTimer = 0;                                     // 游戏计时（秒累�
 
 let gameBackButton = null;                             // 游戏页“返回”按钮实例
 let gameRefreshButton = null;                          // 游戏页“刷新”按钮实例
+
+let currentLevel = 1;                                  // 当前关卡：1/2/3
+let levelsSpec = {                                     // 关卡配置
+    1: { rows: 3, cols: 3, size: 120 },
+    2: { rows: 4, cols: 4, size: 100 },
+    3: { rows: 5, cols: 5, size: 90 }
+};
+
+let level1Button = null;                               // 关卡页“第一关”按钮实例
+let level2Button = null;                               // 关卡页“第二关”按钮实例
+let level3Button = null;                               // 关卡页“第三关”按钮实例

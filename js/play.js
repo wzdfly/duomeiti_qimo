@@ -1,10 +1,13 @@
 // 文件作用：游戏网格绘制与交互，含返回主页面
 
 function startSchulteGame(){                           // 初始化并进入游戏页
-    gridNumbers=Array.from({length:25},(_,i)=>i+1).sort(()=>Math.random()-0.5); // 打乱 1..25
-    cellStates=Array(25).fill(0);                      // 清空状态
-    currentNumber=1; gameTimer=0;                      // 重置目标与计时
-    drawGameGrid(); startGameTimer(); bindGamePageEvents(); // 绘制/启动计时/绑定事件
+    const spec = levelsSpec[currentLevel] || levelsSpec[1];
+    gridRows = spec.rows; gridCols = spec.cols; gridSize = spec.size;
+    const total = gridRows * gridCols;
+    gridNumbers = Array.from({length: total}, (_, i)=>i+1).sort(()=>Math.random()-0.5);
+    cellStates = Array(total).fill(0);
+    currentNumber = 1; gameTimer = 0;
+    drawGameGrid(); startGameTimer(); bindGamePageEvents();
 }
 
 function drawGameGrid(){                               // 游戏页：绘制网格/提示/按钮/计时
@@ -63,8 +66,9 @@ function bindGamePageEvents(){                         // 游戏页点击与悬�
             stopFlash(); hintText=""; returnToMainMenu(); return; // 清理并返回主页面
         }
         if(gameRefreshButton.isClicked(x,y)){          // 点击刷新
-            gridNumbers=Array.from({length:25},(_,i)=>i+1).sort(()=>Math.random()-0.5); // 重新打乱
-            cellStates=Array(25).fill(0); currentNumber=1; // 清状态与目标
+            const total = gridRows * gridCols;
+            gridNumbers=Array.from({length: total},(_,i)=>i+1).sort(()=>Math.random()-0.5);
+            cellStates=Array(total).fill(0); currentNumber=1;
             hintText=""; stopFlash(); gameTimer=0;     // 清提示/闪烁/计时
             if(gameInterval){ clearInterval(gameInterval); gameInterval=null; } // 清旧计时
             startGameTimer(); drawGameGrid(); return;  // 重启计时并重绘
@@ -78,9 +82,9 @@ function bindGamePageEvents(){                         // 游戏页点击与悬�
                         correctSound.currentTime=0; correctSound.play(); // 播放正确音效
                         cellStates[idx]=1; currentNumber++;              // 标记正确并递增目标
                         hintText=""; stopFlash();                        // 清提示与闪烁
-                        for(let k=0;k<25;k++) if(cellStates[k]===2) cellStates[k]=0; // 清错误标记
+                        const total = gridRows * gridCols; for(let k=0;k<total;k++) if(cellStates[k]===2) cellStates[k]=0;
                         drawGameGrid();                                  // 重绘
-                        if(currentNumber>25){                            // 全部完成
+                        const total2 = gridRows * gridCols; if(currentNumber>total2){
                             if(gameInterval){ clearInterval(gameInterval); gameInterval=null; } // 停止计时
                             saveRecord(gameTimer);                       // 保存成绩
                             const snapshot=ctx.getImageData(0,0,W,H);   // 当前快照

@@ -16,11 +16,21 @@ function drawStartScreen(){                            // 主页面：倾斜网�
     // 绘制右上方倾斜的预览网格
     drawStartPreviewGrid();
 
-    // 启动烟花开场动画
-    startIntroPhase = 'ascend';
-    rocketSprite = createRocketSprite();
-    particleSprites = [];
-    startIntroAnimationId = requestAnimationFrame(animateStartIntro);
+    if(startIntroAnimationId){                          // 防御：取消可能存在的旧动画
+        cancelAnimationFrame(startIntroAnimationId);
+        startIntroAnimationId = null;
+    }
+
+    if(!firstIntroPlayed){                              // 首次加载才播放烟花
+        firstIntroPlayed = true;
+        startIntroPhase = 'ascend';
+        rocketSprite = createRocketSprite();
+        particleSprites = [];
+        startIntroAnimationId = requestAnimationFrame(animateStartIntro);
+    }else{                                              // 后续直接显示按钮
+        startIntroPhase = 'buttons';
+        showStartButtonCentered();
+    }
 }
 
 function drawStartPreviewGrid(){                       // 预览网格：倾斜数字阵列
@@ -182,8 +192,7 @@ function showStartButtonCentered(){                    // 爆炸中心出现开�
     startButton = new CanvasButton(ctx, W/2-100, H/2-30, 200, 60, "开始游戏", "#42A5F5cc", "#1E88E5cc");
     startButton.draw();
 
-    // 可选：右上角显示“个人成就”按钮（保留原有入口）
-    achievementsButton = new CanvasButton(ctx, W-160, 40, 140, 50, "个人成就", "#4CAF50", "#388E3C");
+    achievementsButton = new CanvasButton(ctx, W-160, 40, 140, 50, "关卡", "#4CAF50", "#388E3C");
     achievementsButton.draw();
 
     // 缓存静态像素用于悬停动画重绘
@@ -192,7 +201,7 @@ function showStartButtonCentered(){                    // 爆炸中心出现开�
     canvas.onclick = function(e){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
         if(startButton.isClicked(x,y)) start();
-        else if(achievementsButton.isClicked(x,y)) showAchievements();
+        else if(achievementsButton.isClicked(x,y)) showLevels();
     };
 
     function redrawStartButtons(){
