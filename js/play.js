@@ -17,10 +17,10 @@ function drawGameGrid(){                               // 游戏页：绘制网�
         for(let j=0;j<gridCols;j++){                   // 遍历列
             let idx=i*gridCols+j;                      // 当前索引
             let x=gridX+j*gridSize; let y=gridY+i*gridSize; // 当前格坐标
-            ctx.fillStyle=cellStates[idx]===0 ? "rgba(0,0,0,0.1)" : // 默认灰
-                           cellStates[idx]===1 ? "#4CAF50" : "#FF5252"; // 正确绿/错误红
+            ctx.fillStyle=cellStates[idx]===0 ? (currentTheme==='night'?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.1)") :
+                           cellStates[idx]===1 ? "#4CAF50" : "#FF5252";
             roundRect(ctx,x,y,gridSize,gridSize,10,true,true); // 绘制格子
-            ctx.fillStyle="#000"; ctx.font="bold 30px Microsoft YaHei"; // 数字样式
+            ctx.fillStyle=getTextColor('gridNumber'); ctx.font="bold 30px Microsoft YaHei";
             ctx.textAlign="center"; ctx.textBaseline="middle"; // 居中
             ctx.fillText(gridNumbers[idx],x+gridSize/2,y+gridSize/2); // 写数字
         }
@@ -35,21 +35,23 @@ function drawGameGrid(){                               // 游戏页：绘制网�
         ctx.restore();                                 // 恢复状态
     }
     if(hintText){                                      // 顶部提示文本
-        ctx.fillStyle="#2E7D32"; ctx.font="bold 24px Microsoft YaHei"; // 文本样式
+        ctx.fillStyle=getTextColor('hint'); ctx.font="bold 24px Microsoft YaHei";
         ctx.textAlign="center"; ctx.textBaseline="middle"; // 居中
         ctx.fillText(hintText,W/2,30);                 // 写提示
     }
     if(!gameBackButton){                               // 首次创建返回按钮
-        gameBackButton=new CanvasButton(ctx,W-300,40,120,50,"返回","#FF9800","#F57C00"); // 橙色
+        const backColors = getButtonColors('neutral');
+        gameBackButton=new CanvasButton(ctx,W-300,40,120,50,"返回",backColors[0],backColors[1]);
     }
     gameBackButton.ctx=ctx; gameBackButton.x=W-300; gameBackButton.y=40; // 同步上下文与位置
     gameBackButton.w=120; gameBackButton.h=50; gameBackButton.draw();    // 绘制返回按钮
     if(!gameRefreshButton){                            // 首次创建刷新按钮
-        gameRefreshButton=new CanvasButton(ctx,W-160,40,120,50,"刷新","#2196F3","#1976D2"); // 蓝色
+        const refreshColors = getButtonColors('primary');
+        gameRefreshButton=new CanvasButton(ctx,W-160,40,120,50,"刷新",refreshColors[0],refreshColors[1]);
     }
     gameRefreshButton.ctx=ctx; gameRefreshButton.x=W-160; gameRefreshButton.y=40; // 同步位置
     gameRefreshButton.w=120; gameRefreshButton.h=50; gameRefreshButton.draw();    // 绘制刷新按钮
-    ctx.fillStyle="#333"; ctx.font="bold 28px Microsoft YaHei"; ctx.textAlign="right"; // 计时样式
+    ctx.fillStyle=getTextColor('timer'); ctx.font="bold 28px Microsoft YaHei"; ctx.textAlign="right";
     ctx.fillText(`计时: ${gameTimer}s`,W-20,30);       // 绘制计时
 }
 
@@ -85,11 +87,21 @@ function bindGamePageEvents(){                         // 游戏页点击与悬�
                         const total = gridRows * gridCols; for(let k=0;k<total;k++) if(cellStates[k]===2) cellStates[k]=0;
                         drawGameGrid();                                  // 重绘
                         const total2 = gridRows * gridCols; if(currentNumber>total2){
-                            if(gameInterval){ clearInterval(gameInterval); gameInterval=null; } // 停止计时
-                            saveRecord(gameTimer);                       // 保存成绩
-                            const snapshot=ctx.getImageData(0,0,W,H);   // 当前快照
-                            const dialog=new CanvasDialog(ctx,"完成","已完成游戏！",400,220,true,snapshot); // 完成弹窗
-                            dialog.show(()=>{ drawGameGrid(); bindGamePageEvents(); }); // 关闭后恢复
+                            if(gameInterval){ clearInterval(gameInterval); gameInterval=null; }
+                            saveRecord(gameTimer);
+                            const snapshot=ctx.getImageData(0,0,W,H);
+                            const dialog=new CanvasDialog(ctx,"完成","已完成该关卡",400,220,false,snapshot);
+                            dialog.okButton.text = "重玩";
+                            dialog.cancelButton.text = "下一关";
+                            dialog.show(()=>{
+                                const t = gridRows * gridCols;
+                                gridNumbers=Array.from({length: t},(_,i)=>i+1).sort(()=>Math.random()-0.5);
+                                cellStates=Array(t).fill(0); currentNumber=1; hintText=""; stopFlash(); gameTimer=0;
+                                startGameTimer(); drawGameGrid(); bindGamePageEvents();
+                            }, ()=>{
+                                if(currentLevel<3) currentLevel++;
+                                startSchulteGame();
+                            });
                         }
                     }else{                                              // 点击错误
                         wrongSound.currentTime=0; wrongSound.play();     // 播放错误音效

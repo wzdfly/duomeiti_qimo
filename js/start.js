@@ -24,6 +24,7 @@ function drawStartScreen(){                            // 主页面：倾斜网�
     if(!firstIntroPlayed){                              // 首次加载才播放烟花
         firstIntroPlayed = true;
         startIntroPhase = 'ascend';
+        if(!resourceLoadStarted){ startResourceLoad(); }
         rocketSprite = createRocketSprite();
         particleSprites = [];
         startIntroAnimationId = requestAnimationFrame(animateStartIntro);
@@ -52,7 +53,7 @@ function drawStartPreviewGrid(){                       // 预览网格：倾斜�
         for(let j=0;j<cols;j++){                       // 遍历列
             const x=j*size, y=i*size;                  // 单格坐标
             const alpha=0.2+(i/(rows-1))*0.8;          // 逐行透明度
-            ctx.fillStyle=`rgba(0,0,0,${alpha})`;      // 黑色透明
+            ctx.fillStyle=`rgba(192,192,192,${alpha})`;      // 黑色透明
             ctx.font="bold 20px Microsoft YaHei";      // 字体
             ctx.textAlign="center"; ctx.textBaseline="middle"; // 居中
             ctx.fillText(numbers[numIndex++],x+size/2,y+size/2); // 绘制数字
@@ -63,41 +64,39 @@ function drawStartPreviewGrid(){                       // 预览网格：倾斜�
 
 // --- 开场烟花：火箭与粒子精灵 ---
 function createRocketSprite(){                         // 从下方发射的火箭精灵
-    const rocket = new Sprite('rocket',{               // 自定义 painter：发光圆点
+    const rocket = new Sprite('rocket',{
         paint(sprite,context){
+            const p = Math.max(0, Math.min(loadProgress||0, 1));
+            const cx = sprite.left, cy = sprite.top, r = sprite.radius;
             context.save();
-            context.shadowColor = 'rgba(255,200,120,0.8)';
-            context.shadowBlur = 20;
-            context.globalAlpha = 0.95;
-            context.fillStyle = '#ffd54f';
+            context.lineWidth = 6;
+            context.strokeStyle = '#ffdb9cff';
             context.beginPath();
-            context.arc(sprite.left, sprite.top, sprite.radius, 0, Math.PI*2);
-            context.fill();
-            // 尾焰
-            context.globalAlpha = 0.6;
-            const grad = context.createLinearGradient(sprite.left, sprite.top, sprite.left, sprite.top+60);
-            grad.addColorStop(0,'rgba(255,180,100,0.7)');
-            grad.addColorStop(1,'rgba(255,120,80,0)');
-            context.fillStyle = grad;
+            context.arc(cx, cy, r, 0, Math.PI*2);
+            context.stroke();
             context.beginPath();
-            context.moveTo(sprite.left-3, sprite.top);
-            context.lineTo(sprite.left+3, sprite.top);
-            context.lineTo(sprite.left+10, sprite.top+60);
-            context.lineTo(sprite.left-10, sprite.top+60);
-            context.closePath();
+            context.moveTo(cx, cy);
+            context.fillStyle = '#ffa82dff';
+            const startAngle = -Math.PI/2;
+            const endAngle = startAngle + p*2*Math.PI;
+            context.arc(cx, cy, r-2, startAngle, endAngle, false);
+            context.lineTo(cx, cy);
             context.fill();
+            context.fillStyle = '#ffffff';
+            context.font = 'bold 16px Microsoft YaHei';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(`${Math.round(p*100)}%`, cx, cy);
             context.restore();
         }
     }, [
-        { // 上升行为
-            execute(sprite, context){
-                sprite.top -= sprite.speed;
-                if(sprite.top <= sprite.targetY){
-                    // 切换到爆炸阶段
+        {
+            execute(sprite){
+                const p = Math.max(0, Math.min(loadProgress||0, 1));
+                sprite.top = sprite.startTop - (sprite.startTop - sprite.targetY) * p;
+                if(p >= 1){
                     startIntroPhase = 'explode';
-                    // 生成爆炸粒子
                     createExplosionParticles(sprite.left, sprite.top);
-                    // 隐藏火箭
                     sprite.visible = false;
                 }
             }
@@ -107,7 +106,7 @@ function createRocketSprite(){                         // 从下方发射的火�
     rocket.left = W/2;                                 // 居中发射
     rocket.top = H - 20;                               // 底部起始
     rocket.radius = 20;
-    rocket.speed = 10;                                 // 上升速度
+    rocket.startTop = rocket.top;
     rocket.targetY = H/2;                              // 在屏幕中间炸开
     return rocket;
 }
@@ -189,11 +188,17 @@ function animateStartIntro(){                          // 开场动画循环（�
 }
 
 function showStartButtonCentered(){                    // 爆炸中心出现开始按钮
-    startButton = new CanvasButton(ctx, W/2-100, H/2-30, 200, 60, "开始游戏", "#42A5F5cc", "#1E88E5cc");
+    const startColors = getButtonColors('primary');
+    startButton = new CanvasButton(ctx, W/2-100, H/2-30, 200, 60, "开始游戏", startColors[0], startColors[1]);
     startButton.draw();
 
-    achievementsButton = new CanvasButton(ctx, W-160, 40, 140, 50, "关卡", "#4CAF50", "#388E3C");
+    const levelColors = getButtonColors('accent');
+    achievementsButton = new CanvasButton(ctx, W-160, 40, 140, 50, "关卡", levelColors[0], levelColors[1]);
     achievementsButton.draw();
+
+    const settingsColors = getButtonColors('neutral');
+    settingsButton = new CanvasButton(ctx, W-320, 40, 140, 50, "设置", settingsColors[0], settingsColors[1]);
+    settingsButton.draw();
 
     // 缓存静态像素用于悬停动画重绘
     startScreenData = ctx.getImageData(0,0,W,H);
@@ -202,18 +207,21 @@ function showStartButtonCentered(){                    // 爆炸中心出现开�
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
         if(startButton.isClicked(x,y)) start();
         else if(achievementsButton.isClicked(x,y)) showLevels();
+        else if(settingsButton.isClicked(x,y)) showSettingsPage();
     };
 
     function redrawStartButtons(){
         ctx.putImageData(startScreenData,0,0);
         startButton.draw();
         achievementsButton.draw();
+        settingsButton.draw();
     }
     canvas.onmousemove = function(e){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
         const changed = startButton.setHovered(startButton.contains(x,y)) ||
-                        achievementsButton.setHovered(achievementsButton.contains(x,y));
-        if(changed) animateButtons(redrawStartButtons,[startButton,achievementsButton]);
+                        achievementsButton.setHovered(achievementsButton.contains(x,y)) ||
+                        settingsButton.setHovered(settingsButton.contains(x,y));
+        if(changed) animateButtons(redrawStartButtons,[startButton,achievementsButton,settingsButton]);
     };
 }
 

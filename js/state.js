@@ -7,7 +7,7 @@ let backButton = null;                                 // 成就页“返回”�
 let clearRecordsButton = null;                         // 成就页“清除记录”按钮实例
 
 let startScreenData = null;                            // 主页面静态像素快照
-let achievementsScreenData = null;                     // 成就页静态像素快照
+let levelScreenData = null;                     // 成就页静态像素快照
 
 let hintText = "";                                     // 顶部提示文本（点错提示）
 let flashCellIndex = null;                             // 当前闪烁高亮的格子索引
@@ -47,3 +47,10 @@ let levelsSpec = {                                     // 关卡配置
 let level1Button = null;                               // 关卡页“第一关”按钮实例
 let level2Button = null;                               // 关卡页“第二关”按钮实例
 let level3Button = null;                               // 关卡页“第三关”按钮实例
+
+let currentTheme = 'day';                              // 主题：day/night
+let currentVolume = 0.5;                               // 全局音量 0..1
+let settingsButton = null;                             // 主页面“设置”按钮实例
+
+let loadProgress = 0;                                  // 资源加载进度 0..1
+let resourceLoadStarted = false;                       // 是否已开始资源加载

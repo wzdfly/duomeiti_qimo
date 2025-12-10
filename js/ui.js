@@ -92,9 +92,9 @@ class CanvasDialog{                                     // 弹窗组件（标题
         }
         this.callback=null; this.active=false;          // 回调与激活状态
     }
-    show(callback){                                     // 显示弹窗并启动淡入
-        this.active=true; this.callback=callback;       // 标记激活与保存回调
-        this.animateIn();                               // 启动淡入动画
+    show(callback, cancelCallback){
+        this.active=true; this.callback=callback; this.cancelCallback=cancelCallback;
+        this.animateIn();
     }
     animateIn(){                                        // 淡入动画逻辑
         this.opacity+=0.1; if(this.opacity>1) this.opacity=1; // 增加透明度
@@ -106,12 +106,12 @@ class CanvasDialog{                                     // 弹窗组件（标题
         canvas.onclick=(e)=>{                           // 点击事件
             const {x,y}=windowToCanvas(canvas,e.clientX,e.clientY); // 坐标换算
             if(!this.active) return;                    // 未激活忽略
-            if(this.okButton.isClicked(x,y)){           // 点 OK
-                this.active=false; if(this.callback) this.callback(); // 执行回调
-            }else if(!this.singleButton && this.cancelButton.isClicked(x,y)){ // 点取消
-                this.active=false;                      // 关闭弹窗
-                if(this.snapshot) ctx.putImageData(this.snapshot,0,0); // 还原底图
-                bindCurrentPageEvents();                // 恢复成就页事件
+            if(this.okButton.isClicked(x,y)){
+                this.active=false; if(this.callback) this.callback();
+            }else if(!this.singleButton && this.cancelButton.isClicked(x,y)){
+                this.active=false;
+                if(typeof this.cancelCallback === 'function'){ this.cancelCallback(); }
+                else { if(this.snapshot) ctx.putImageData(this.snapshot,0,0); bindCurrentPageEvents(); }
             }
         };
         canvas.onmousemove=(e)=>{                       // 悬停放大
@@ -127,20 +127,26 @@ class CanvasDialog{                                     // 弹窗组件（标题
     draw(){                                            // 绘制弹窗元素
         const ctx=this.ctx;                            // 上下文引用
         if(this.snapshot) ctx.putImageData(this.snapshot,0,0); // 还原底图
-        ctx.fillStyle=`rgba(0,0,0,${0.5*this.opacity})`; ctx.fillRect(0,0,W,H); // 半透明蒙层
+        const dialogTheme2 = getDialogTheme();
+        ctx.fillStyle=`rgba(0,0,0,${dialogTheme2.overlayAlpha*this.opacity})`; ctx.fillRect(0,0,W,H);
         ctx.fillStyle=`rgba(255,255,255,${this.opacity})`; // 白底
         ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=12; // 阴影
         ctx.shadowOffsetX=0; ctx.shadowOffsetY=4;      // 阴影偏移
         roundRect(ctx,this.x,this.y,this.width,this.height,15,true,true); // 弹窗框
         ctx.shadowColor="transparent";                 // 关闭阴影
-        const grad=ctx.createLinearGradient(this.x,this.y,this.x,this.y+50); // 标题栏渐变
-        grad.addColorStop(0,"#FFA726"); grad.addColorStop(1,"#FB8C00"); // 渐变色
+        const dialogTheme = getDialogTheme();
+        const grad=ctx.createLinearGradient(this.x,this.y,this.x,this.y+50);
+        grad.addColorStop(0, dialogTheme.titleTop); grad.addColorStop(1, dialogTheme.titleBottom);
         ctx.fillStyle=grad; roundRect(ctx,this.x,this.y,this.width,50,15,true,false); // 标题栏
         ctx.fillStyle="#fff"; ctx.font="bold 26px Microsoft YaHei"; // 标题文字样式
         ctx.textAlign="center"; ctx.textBaseline="middle"; // 居中
         ctx.fillText(this.title,this.x+this.width/2,this.y+25); // 写标题
-        ctx.fillStyle=`rgba(50,50,50,${this.opacity})`; ctx.font="22px Microsoft YaHei"; // 文本样式
-        ctx.fillText(this.message,this.x+this.width/2,this.y+100); // 写消息
+        ctx.save();
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = getTextColor('text');
+        ctx.font="22px Microsoft YaHei";
+        ctx.fillText(this.message,this.x+this.width/2,this.y+100);
+        ctx.restore();
         this.okButton.draw(); if(!this.singleButton) this.cancelButton.draw(); // 绘制按钮
     }
 }

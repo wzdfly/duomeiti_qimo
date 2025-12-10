@@ -1,5 +1,4 @@
-// 文件作用：成就页与记录管理（读取/保存/清空/展示）
-
+// 文件作用：关卡页与记录管理（读取/保存/清空/展示）
 function getBestTimes(){
     const raw = localStorage.getItem("bestTimes");
     let obj = {};
@@ -52,12 +51,13 @@ function clearRecords(){
 }
 
 function showLevels(){
-    ctx.clearRect(0,0,W,H);
+    ctx.clearRect(0,0,W,H); 
     const bt = getBestTimes();
     const stats = getStats();
-    ctx.fillStyle = "#333"; ctx.font = "bold 48px Microsoft YaHei";
+    ctx.fillStyle = getTextColor('title'); ctx.font = "bold 48px Microsoft YaHei";
     ctx.textAlign = "center"; ctx.fillText("关卡", W/2, 80);
     ctx.font = "bold 30px Microsoft YaHei";
+    ctx.fillStyle = getTextColor('text');
     ctx.fillText(`游戏次数: ${stats.count}`, W/2, 130);
     ctx.fillText(`总计时: ${stats.totalTime} 秒`, W/2, 170);
     const t1 = bt[1]===null? "暂无记录": `${bt[1]} 秒`;
@@ -71,11 +71,11 @@ function showLevels(){
     level1Button = new CanvasButton(ctx, W/2-330, H-180, 180, 60, "第一关", sel1?"#4CAF50":"#2196F3", sel1?"#388E3C":"#1976D2");
     level2Button = new CanvasButton(ctx, W/2-90,  H-180, 180, 60, "第二关", sel2?"#4CAF50":"#2196F3", sel2?"#388E3C":"#1976D2");
     level3Button = new CanvasButton(ctx, W/2+150, H-180, 180, 60, "第三关", sel3?"#4CAF50":"#2196F3", sel3?"#388E3C":"#1976D2");
-    backButton = new CanvasButton(ctx, W/2-220, H-100, 180, 60, "返回", "#4CAF50", "#388E3C");
-    clearRecordsButton = new CanvasButton(ctx, W/2+40, H-100, 180, 60, "清除记录", "#FF5252", "#D32F2F");
+    backButton = new CanvasButton(ctx, W/2-220, H-100, 180, 60, "返回", ...getButtonColors('accent'));
+    clearRecordsButton = new CanvasButton(ctx, W/2+40, H-100, 180, 60, "清除记录", ...getButtonColors('warn'));
     level1Button.draw(); level2Button.draw(); level3Button.draw();
     backButton.draw(); clearRecordsButton.draw();
-    achievementsScreenData = ctx.getImageData(0,0,W,H);
+    levelScreenData = ctx.getImageData(0,0,W,H);
     bindCurrentPageEvents();
 }
 
@@ -85,12 +85,12 @@ function bindCurrentPageEvents(){
             const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
             if(backButton.isClicked(x,y)) returnToMainMenu();
             else if(clearRecordsButton.isClicked(x,y)) clearRecords();
-            else if(level1Button.isClicked(x,y)){ currentLevel=1; showLevels(); }
-            else if(level2Button.isClicked(x,y)){ currentLevel=2; showLevels(); }
-            else if(level3Button.isClicked(x,y)){ currentLevel=3; showLevels(); }
+            else if(level1Button.isClicked(x,y)){ currentLevel=1; startSchulteGame(); }
+            else if(level2Button.isClicked(x,y)){ currentLevel=2; startSchulteGame(); }
+            else if(level3Button.isClicked(x,y)){ currentLevel=3; startSchulteGame(); }
         };
         function redraw(){
-            ctx.putImageData(achievementsScreenData,0,0);
+            ctx.putImageData(levelScreenData,0,0);
             level1Button.draw(); level2Button.draw(); level3Button.draw();
             backButton.draw(); clearRecordsButton.draw();
         }
