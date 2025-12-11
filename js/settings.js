@@ -4,8 +4,8 @@ function showSettingsPage(){
     ctx.clearRect(0,0,W,H);
     ctx.drawImage(image,0,0,W,H);
 
-    settingsTemp.theme = currentTheme;
-    settingsTemp.volume = currentVolume;
+    if(settingsTemp.theme===null) settingsTemp.theme = currentTheme;
+    if(settingsTemp.volume===null) settingsTemp.volume = currentVolume;
 
     ctx.fillStyle = getTextColor('title'); ctx.font = 'bold 44px Microsoft YaHei';
     ctx.textAlign = 'center'; ctx.fillText('设置', W/2, 80);
@@ -38,6 +38,8 @@ function showSettingsPage(){
     ctx.fillText('音量', W/2, volY-40);
     drawVolumeSlider(W/2-250, volY, 500, 14, settingsTemp.volume);
 
+    const snapshot = ctx.getImageData(0,0,W,H);
+    achievementsScreenData = snapshot;
     bindSettingsEvents(W/2-250, volY, 500);
 }
 
@@ -65,7 +67,7 @@ function bindSettingsEvents(sx, sy, sw){
         }
         if(dayModeButton.isClicked(x,y)) settingsTemp.theme='day';
         if(nightModeButton.isClicked(x,y)) settingsTemp.theme='night';
-        ctx.putImageData(levelScreenData,0,0);
+        ctx.putImageData(achievementsScreenData,0,0);
         showSettingsPage();
     };
     let dragging=false;
@@ -77,10 +79,13 @@ function bindSettingsEvents(sx, sy, sw){
     canvas.onmousemove = function(e){
         if(dragging){ const {x} = windowToCanvas(canvas, e.clientX, e.clientY); updateVolByX(x); }
     };
-    window.onmouseup = function(){ dragging=false; };
+    canvas.onmouseup = function(){ dragging=false; };
+    canvas.onmouseleave = function(){ dragging=false; };
 
     function updateVolByX(mx){
         let v = (mx - sx)/sw; v = Math.max(0, Math.min(1, v)); settingsTemp.volume = v;
+        setVolume(v);
+        ctx.putImageData(achievementsScreenData,0,0);
         drawVolumeSlider(sx, sy, sw, 14, v);
     }
 }

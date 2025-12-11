@@ -187,10 +187,14 @@ function animateStartIntro(){                          // 开场动画循环（�
     }
 }
 
-function showStartButtonCentered(){                    // 爆炸中心出现开始按钮
-    const startColors = getButtonColors('primary');
-    startButton = new CanvasButton(ctx, W/2-100, H/2-30, 200, 60, "开始游戏", startColors[0], startColors[1]);
-    startButton.draw();
+function showStartButtonCentered(){                    // 爆炸后显示模式选择与其他按钮
+    const reactColors = getButtonColors('primary');
+    reactionButton = new CanvasButton(ctx, W/2-100, H/2-60, 200, 60, "反应模式", reactColors[0], reactColors[1]);
+    reactionButton.draw();
+
+    const memColors = getButtonColors('accent');
+    memoryButton = new CanvasButton(ctx, W/2-100, H/2+60, 200, 60, "记忆模式", memColors[0], memColors[1]);
+    memoryButton.draw();
 
     const levelColors = getButtonColors('accent');
     achievementsButton = new CanvasButton(ctx, W-160, 40, 140, 50, "关卡", levelColors[0], levelColors[1]);
@@ -205,23 +209,26 @@ function showStartButtonCentered(){                    // 爆炸中心出现开�
 
     canvas.onclick = function(e){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
-        if(startButton.isClicked(x,y)) start();
+        if(reactionButton.isClicked(x,y)) { currentMode='reaction'; start(); }
+        else if(memoryButton.isClicked(x,y)) { currentMode='memory'; startMemoryMode(); }
         else if(achievementsButton.isClicked(x,y)) showLevels();
         else if(settingsButton.isClicked(x,y)) showSettingsPage();
     };
 
     function redrawStartButtons(){
         ctx.putImageData(startScreenData,0,0);
-        startButton.draw();
+        reactionButton.draw();
+        memoryButton.draw();
         achievementsButton.draw();
         settingsButton.draw();
     }
     canvas.onmousemove = function(e){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
-        const changed = startButton.setHovered(startButton.contains(x,y)) ||
+        const changed = reactionButton.setHovered(reactionButton.contains(x,y)) ||
+                        memoryButton.setHovered(memoryButton.contains(x,y)) ||
                         achievementsButton.setHovered(achievementsButton.contains(x,y)) ||
                         settingsButton.setHovered(settingsButton.contains(x,y));
-        if(changed) animateButtons(redrawStartButtons,[startButton,achievementsButton,settingsButton]);
+        if(changed) animateButtons(redrawStartButtons,[reactionButton,memoryButton,achievementsButton,settingsButton]);
     };
 }
 

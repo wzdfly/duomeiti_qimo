@@ -7,7 +7,7 @@ let backButton = null;                                 // 成就页“返回”�
 let clearRecordsButton = null;                         // 成就页“清除记录”按钮实例
 
 let startScreenData = null;                            // 主页面静态像素快照
-let levelScreenData = null;                     // 成就页静态像素快照
+let achievementsScreenData = null;                     // 成就/关卡/设置页静态像素快照
 
 let hintText = "";                                     // 顶部提示文本（点错提示）
 let flashCellIndex = null;                             // 当前闪烁高亮的格子索引
@@ -54,3 +54,10 @@ let settingsButton = null;                             // 主页面“设置”�
 
 let loadProgress = 0;                                  // 资源加载进度 0..1
 let resourceLoadStarted = false;                       // 是否已开始资源加载
+
+let currentMode = 'reaction';                          // 模式：reaction/memory
+let reactionButton = null;                             // 主页面“反应模式”按钮实例
+let memoryButton = null;                               // 主页面“记忆模式”按钮实例
+let numbersHidden = false;                             // 记忆模式：是否隐藏数字
+let memoryCountdownValue = 10;                         // 记忆预览倒计时
+let memoryCountdownInterval = null;                    // 记忆预览倒计时定时器

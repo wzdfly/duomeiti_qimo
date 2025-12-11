@@ -52,6 +52,7 @@ function clearRecords(){
 
 function showLevels(){
     ctx.clearRect(0,0,W,H); 
+    ctx.drawImage(image,0,0,W,H);
     const bt = getBestTimes();
     const stats = getStats();
     ctx.fillStyle = getTextColor('title'); ctx.font = "bold 48px Microsoft YaHei";
@@ -85,9 +86,9 @@ function bindCurrentPageEvents(){
             const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
             if(backButton.isClicked(x,y)) returnToMainMenu();
             else if(clearRecordsButton.isClicked(x,y)) clearRecords();
-            else if(level1Button.isClicked(x,y)){ currentLevel=1; startSchulteGame(); }
-            else if(level2Button.isClicked(x,y)){ currentLevel=2; startSchulteGame(); }
-            else if(level3Button.isClicked(x,y)){ currentLevel=3; startSchulteGame(); }
+            else if(level1Button.isClicked(x,y)){ currentLevel=1; if(currentMode==='memory') startMemoryMode(); else startSchulteGame(); }
+            else if(level2Button.isClicked(x,y)){ currentLevel=2; if(currentMode==='memory') startMemoryMode(); else startSchulteGame(); }
+            else if(level3Button.isClicked(x,y)){ currentLevel=3; if(currentMode==='memory') startMemoryMode(); else startSchulteGame(); }
         };
         function redraw(){
             ctx.putImageData(levelScreenData,0,0);

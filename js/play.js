@@ -7,7 +7,28 @@ function startSchulteGame(){                           // 初始化并进入游�
     gridNumbers = Array.from({length: total}, (_, i)=>i+1).sort(()=>Math.random()-0.5);
     cellStates = Array(total).fill(0);
     currentNumber = 1; gameTimer = 0;
+    numbersHidden = false; currentMode = 'reaction';
     drawGameGrid(); startGameTimer(); bindGamePageEvents();
+}
+
+function startMemoryMode(){                            // 记忆模式：预览后隐藏数字
+    const spec = levelsSpec[currentLevel] || levelsSpec[1];
+    gridRows = spec.rows; gridCols = spec.cols; gridSize = spec.size;
+    const total = gridRows * gridCols;
+    gridNumbers = Array.from({length: total}, (_, i)=>i+1).sort(()=>Math.random()-0.5);
+    cellStates = Array(total).fill(0);
+    currentNumber = 1; gameTimer = 0;
+    currentMode = 'memory'; numbersHidden = false; memoryCountdownValue = 10;
+    if(bgMusic.paused) bgMusic.play();
+    drawGameGrid(); bindGamePageEvents();
+    if(memoryCountdownInterval) { clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; }
+    memoryCountdownInterval = setInterval(()=>{
+        memoryCountdownValue--; drawGameGrid();
+        if(memoryCountdownValue<=0){
+            clearInterval(memoryCountdownInterval); memoryCountdownInterval=null;
+            numbersHidden = true; startGameTimer(); drawGameGrid();
+        }
+    },1000);
 }
 
 function drawGameGrid(){                               // 游戏页：绘制网格/提示/按钮/计时
@@ -21,8 +42,9 @@ function drawGameGrid(){                               // 游戏页：绘制网�
                            cellStates[idx]===1 ? "#4CAF50" : "#FF5252";
             roundRect(ctx,x,y,gridSize,gridSize,10,true,true); // 绘制格子
             ctx.fillStyle=getTextColor('gridNumber'); ctx.font="bold 30px Microsoft YaHei";
-            ctx.textAlign="center"; ctx.textBaseline="middle"; // 居中
-            ctx.fillText(gridNumbers[idx],x+gridSize/2,y+gridSize/2); // 写数字
+            ctx.textAlign="center"; ctx.textBaseline="middle";
+            const shouldShow = !numbersHidden || cellStates[idx]===1;
+            if(shouldShow) ctx.fillText(gridNumbers[idx],x+gridSize/2,y+gridSize/2);
         }
     }
     if(flashCellIndex!==null && flashToggle){          // 闪烁下一个正确格子外框
@@ -38,6 +60,11 @@ function drawGameGrid(){                               // 游戏页：绘制网�
         ctx.fillStyle=getTextColor('hint'); ctx.font="bold 24px Microsoft YaHei";
         ctx.textAlign="center"; ctx.textBaseline="middle"; // 居中
         ctx.fillText(hintText,W/2,30);                 // 写提示
+    }
+    if(currentMode==='memory' && memoryCountdownInterval){ // 记忆预览倒计时显示
+        ctx.fillStyle=getTextColor('title'); ctx.font="bold 32px Microsoft YaHei";
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText(`记忆倒计时: ${memoryCountdownValue}s`, W/2, 100);
     }
     if(!gameBackButton){                               // 首次创建返回按钮
         const backColors = getButtonColors('neutral');
@@ -65,15 +92,29 @@ function bindGamePageEvents(){                         // 游戏页点击与悬�
         const {x,y}=windowToCanvas(canvas,e.clientX,e.clientY); // 坐标换算
         if(gameBackButton.isClicked(x,y)){             // 点击返回
             if(gameInterval){ clearInterval(gameInterval); gameInterval=null; } // 停止计时
+            if(memoryCountdownInterval){ clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; } // 停止预览倒计时
             stopFlash(); hintText=""; returnToMainMenu(); return; // 清理并返回主页面
         }
         if(gameRefreshButton.isClicked(x,y)){          // 点击刷新
             const total = gridRows * gridCols;
             gridNumbers=Array.from({length: total},(_,i)=>i+1).sort(()=>Math.random()-0.5);
             cellStates=Array(total).fill(0); currentNumber=1;
-            hintText=""; stopFlash(); gameTimer=0;     // 清提示/闪烁/计时
-            if(gameInterval){ clearInterval(gameInterval); gameInterval=null; } // 清旧计时
-            startGameTimer(); drawGameGrid(); return;  // 重启计时并重绘
+            hintText=""; stopFlash(); gameTimer=0;
+            if(gameInterval){ clearInterval(gameInterval); gameInterval=null; }
+            if(memoryCountdownInterval){ clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; }
+            if(currentMode==='memory'){
+                numbersHidden=false; memoryCountdownValue=10; drawGameGrid();
+                memoryCountdownInterval=setInterval(()=>{
+                    memoryCountdownValue--; drawGameGrid();
+                    if(memoryCountdownValue<=0){ clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; numbersHidden=true; startGameTimer(); drawGameGrid(); }
+                },1000);
+            }else{
+                startGameTimer(); drawGameGrid();
+            }
+            return;
+        }
+        if(currentMode==='memory' && !numbersHidden){   // 记忆模式预览阶段不响应格子点击
+            return;                                     // 忽略点击
         }
         for(let i=0;i<gridRows;i++){                   // 遍历格子
             for(let j=0;j<gridCols;j++){
@@ -94,20 +135,24 @@ function bindGamePageEvents(){                         // 游戏页点击与悬�
                             dialog.okButton.text = "重玩";
                             dialog.cancelButton.text = "下一关";
                             dialog.show(()=>{
-                                const t = gridRows * gridCols;
-                                gridNumbers=Array.from({length: t},(_,i)=>i+1).sort(()=>Math.random()-0.5);
-                                cellStates=Array(t).fill(0); currentNumber=1; hintText=""; stopFlash(); gameTimer=0;
-                                startGameTimer(); drawGameGrid(); bindGamePageEvents();
+                                if(currentMode==='memory'){
+                                    startMemoryMode();
+                                }else{
+                                    const t = gridRows * gridCols;
+                                    gridNumbers=Array.from({length: t},(_,i)=>i+1).sort(()=>Math.random()-0.5);
+                                    cellStates=Array(t).fill(0); currentNumber=1; hintText=""; stopFlash(); gameTimer=0;
+                                    startGameTimer(); drawGameGrid(); bindGamePageEvents();
+                                }
                             }, ()=>{
                                 if(currentLevel<3) currentLevel++;
-                                startSchulteGame();
+                                if(currentMode==='memory') startMemoryMode(); else startSchulteGame();
                             });
                         }
                     }else{                                              // 点击错误
                         wrongSound.currentTime=0; wrongSound.play();     // 播放错误音效
                         if(cellStates[idx]===0) cellStates[idx]=2;      // 标记错误
                         hintText=`点错了！请点击 ${currentNumber}`;       // 顶部提示
-                        startFlashNextCell();                            // 闪烁正确格子
+                        if(currentMode==='reaction') startFlashNextCell();
                         drawGameGrid();                                  // 重绘
                     }
                     return;                                             // 结束处理（命中后）
@@ -127,6 +172,8 @@ function returnToMainMenu(){                           // 返回主页面（清�
     ctx.clearRect(0,0,W,H);                            // 清空画布
     if(countdownInterval){ clearInterval(countdownInterval); countdownInterval=null; } // 清倒计时
     if(gameInterval){ clearInterval(gameInterval); gameInterval=null; } // 清游戏计时
+    if(memoryCountdownInterval){ clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; } // 清记忆预览倒计时
+    numbersHidden=false;                                // 重置隐藏状态
     stopFlash(); hintText="";                           // 停止闪烁并清空提示
     ctx.drawImage(image,0,0,W,H);                      // 绘制背景
     drawStartScreen();                                 // 绘制主页面
