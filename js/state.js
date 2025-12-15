@@ -51,9 +51,8 @@ let level3Button = null;                               // 关卡页“第三关�
 let currentTheme = 'day';                              // 主题：day/night
 let currentVolume = 0.5;                               // 全局音量 0..1
 let settingsButton = null;                             // 主页面“设置”按钮实例
-
-let loadProgress = 0;                                  // 资源加载进度 0..1
-let resourceLoadStarted = false;                       // 是否已开始资源加载
+let gamesButton = null;                                // 主页面“游戏选择”按钮
+let backMainButton = null;                             // 开始页“返回主页面”按钮
 
 let currentMode = 'reaction';                          // 模式：reaction/memory
 let reactionButton = null;                             // 主页面“反应模式”按钮实例

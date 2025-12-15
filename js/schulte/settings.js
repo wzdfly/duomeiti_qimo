@@ -59,11 +59,11 @@ function drawVolumeSlider(x,y,width,height,vol){
 function bindSettingsEvents(sx, sy, sw){
     canvas.onclick = function(e){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
-        if(backButton.isClicked(x,y)){ returnToMainMenu(); return; }
+        if(backButton.isClicked(x,y)){ drawStartScreen(); return; }
         if(saveButton.isClicked(x,y)){
             setTheme(settingsTemp.theme);
             setVolume(settingsTemp.volume);
-            returnToMainMenu(); return;
+            drawStartScreen(); return;
         }
         if(dayModeButton.isClicked(x,y)) settingsTemp.theme='day';
         if(nightModeButton.isClicked(x,y)) settingsTemp.theme='night';

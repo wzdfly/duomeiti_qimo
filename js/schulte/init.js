@@ -9,7 +9,7 @@ function init(){                                       // 初始化：基本绘�
         const savedTheme = localStorage.getItem('theme');
         if(savedTheme) currentTheme = savedTheme;
         const savedVolume = localStorage.getItem('volume');
-        if(savedVolume!==null) currentVolume = Math.max(0, Math.min(1, parseFloat(savedVolume))||0.5);
+        if(savedVolume!==null) currentVolume = Math.max(0, Math.min(1, parseFloat(savedVolume))||0.5);//parseFloat用于将字符串转化成浮点数
         setVolume(currentVolume);
     }catch(e){}
     image.src = themeBgSrc(currentTheme);
