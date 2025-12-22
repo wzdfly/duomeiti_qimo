@@ -51,10 +51,6 @@ function showStartButtonCentered(){                    // 爆炸后显示模式�
     achievementsButton = new CanvasButton(ctx, W-160, 40, 140, 50, "关卡", levelColors[0], levelColors[1]);
     achievementsButton.draw();
 
-    const settingsColors = getButtonColors('neutral');
-    settingsButton = new CanvasButton(ctx, W-320, 40, 140, 50, "设置", settingsColors[0], settingsColors[1]);
-    settingsButton.draw();
-
     const backColors = getButtonColors('accent');
     backMainButton = new CanvasButton(ctx, 20, 40, 160, 50, "返回主页面", backColors[0], backColors[1]);
     backMainButton.draw();
@@ -67,7 +63,6 @@ function showStartButtonCentered(){                    // 爆炸后显示模式�
         if(reactionButton.isClicked(x,y)) { currentMode='reaction'; start(); }
         else if(memoryButton.isClicked(x,y)) { currentMode='memory'; startMemoryMode(); }
         else if(achievementsButton.isClicked(x,y)) showLevels();
-        else if(settingsButton.isClicked(x,y)) showSettingsPage();
         else if(backMainButton.isClicked(x,y)) showGamesPage();
     };
 
@@ -76,17 +71,16 @@ function showStartButtonCentered(){                    // 爆炸后显示模式�
         reactionButton.draw();
         memoryButton.draw();
         achievementsButton.draw();
-        settingsButton.draw();
         backMainButton.draw();
     }
+
     canvas.onmousemove = function(e){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
         const changed = reactionButton.setHovered(reactionButton.contains(x,y)) ||
                         memoryButton.setHovered(memoryButton.contains(x,y)) ||
                         achievementsButton.setHovered(achievementsButton.contains(x,y)) ||
-                        settingsButton.setHovered(settingsButton.contains(x,y)) ||
                         backMainButton.setHovered(backMainButton.contains(x,y));
-        if(changed) animateButtons(redrawStartButtons,[reactionButton,memoryButton,achievementsButton,settingsButton,backMainButton]);
+        if(changed) animateButtons(redrawStartButtons,[reactionButton,memoryButton,achievementsButton,backMainButton]);
     };
 }
 

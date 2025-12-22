@@ -8,21 +8,30 @@ function onImageLoad(){                                // 背景图加载完成�
         console.log("等待用户交互后播放音乐");         // 浏览器限制提示
     });                                                // 捕获失败
 }
+let gamesBgTheme = '';
 function ensureGamesBg(){
-    if(!gamesBg){
+    const targetSrc = currentTheme === 'night' ? 'src/newyear_night.png' : 'src/bg_newyear.png';
+    if(!gamesBg || gamesBgTheme !== currentTheme){
         gamesBg = new Image();
-        gamesBg.src = "src/bg_newyear.png";
-        gamesBg.onload = function(){ showGamesPage(); };
+        gamesBgTheme = currentTheme;
+        gamesBg.src = targetSrc;
+        gamesBg.onload = function(){ /* 动画循环会自动绘制 */ };
     }
 }
 
 function showGamesPage(){
     ensureGamesBg();
     const gameBtnColors = getButtonColors('primary');
-    const schulteText = '舒尔特方格';
+    const schulteText = '记忆力训练';
     const btnW = 240, btnH = 70;
-    const btnY = H/2 - 30;
+    const btnY = H/2 - 60;
     gameSelectButton = new CanvasButton(ctx, W/2 - btnW/2, btnY, btnW, btnH, schulteText, gameBtnColors[0], gameBtnColors[1]);
+    
+    focusGameButton = new CanvasButton(ctx, W/2 - btnW/2, btnY + 90, btnW, btnH, "专注力训练", gameBtnColors[0], gameBtnColors[1]);
+
+    const settingsColors = getButtonColors('neutral');
+    settingsButton = new CanvasButton(ctx, W-160, 40, 140, 50, "设置", settingsColors[0], settingsColors[1]);
+
     bindGamesEvents();
     stopGamesAnimation();
     gamesRockets = []; gamesParticles = [];
@@ -30,6 +39,7 @@ function showGamesPage(){
 }
 
 let gameSelectButton = null;
+let focusGameButton = null;
 let gamesAnimationId = null;
 
 function bindGamesEvents(){
@@ -40,10 +50,22 @@ function bindGamesEvents(){
             drawStartScreen();
             return;
         }
+        if(focusGameButton && focusGameButton.isClicked(x,y)){
+            stopGamesAnimation();
+            if(window.startFocusGame) window.startFocusGame();
+            return;
+        }
+        if(settingsButton && settingsButton.isClicked(x,y)){
+            stopGamesAnimation();
+            showSettingsPage();
+            return;
+        }
     };
     canvas.onmousemove = function(e){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
-    if(gameSelectButton) gameSelectButton.setHovered(gameSelectButton.contains(x,y));
+        if(gameSelectButton) gameSelectButton.setHovered(gameSelectButton.contains(x,y));
+        if(focusGameButton) focusGameButton.setHovered(focusGameButton.contains(x,y));
+        if(settingsButton) settingsButton.setHovered(settingsButton.contains(x,y));
     };
 }
 
@@ -61,5 +83,7 @@ function animateGamesIntro(ts){
     ctx.font = 'bold 30px Microsoft YaHei'; ctx.fillStyle = getTextColor('text');
     ctx.fillText('请选择要开始的游戏', W/2, 130);
     if(gameSelectButton){ gameSelectButton.ctx=ctx; gameSelectButton.draw(); }
+    if(focusGameButton){ focusGameButton.ctx=ctx; focusGameButton.draw(); }
+    if(settingsButton){ settingsButton.ctx=ctx; settingsButton.draw(); }
     gamesAnimationId = requestAnimationFrame(animateGamesIntro);
 }
