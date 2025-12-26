@@ -28,6 +28,7 @@ function showGamesPage(){
     gameSelectButton = new CanvasButton(ctx, W/2 - btnW/2, btnY, btnW, btnH, schulteText, gameBtnColors[0], gameBtnColors[1]);
     
     focusGameButton = new CanvasButton(ctx, W/2 - btnW/2, btnY + 90, btnW, btnH, "专注力训练", gameBtnColors[0], gameBtnColors[1]);
+    handEyeButton = new CanvasButton(ctx, W/2 - btnW/2, btnY + 180, btnW, btnH, "手眼协调训练", gameBtnColors[0], gameBtnColors[1]);
 
     const settingsColors = getButtonColors('neutral');
     settingsButton = new CanvasButton(ctx, W-160, 40, 140, 50, "设置", settingsColors[0], settingsColors[1]);
@@ -40,6 +41,7 @@ function showGamesPage(){
 
 let gameSelectButton = null;
 let focusGameButton = null;
+let handEyeButton = null;
 let gamesAnimationId = null;
 
 function bindGamesEvents(){
@@ -55,6 +57,15 @@ function bindGamesEvents(){
             if(window.showFocusStartScreen) window.showFocusStartScreen();
             return;
         }
+        if(handEyeButton && handEyeButton.isClicked(x,y)){
+            stopGamesAnimation();
+            if(window.startFisherman){
+                window.startFisherman();
+            }else{
+                location.href = 'js/fisherman/index.html';
+            }
+            return;
+        }
         if(settingsButton && settingsButton.isClicked(x,y)){
             stopGamesAnimation();
             showSettingsPage();
@@ -65,6 +76,7 @@ function bindGamesEvents(){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
         if(gameSelectButton) gameSelectButton.setHovered(gameSelectButton.contains(x,y));
         if(focusGameButton) focusGameButton.setHovered(focusGameButton.contains(x,y));
+        if(handEyeButton) handEyeButton.setHovered(handEyeButton.contains(x,y));
         if(settingsButton) settingsButton.setHovered(settingsButton.contains(x,y));
     };
 }
@@ -84,6 +96,7 @@ function animateGamesIntro(ts){
     ctx.fillText('请选择要开始的游戏', W/2, 130);
     if(gameSelectButton){ gameSelectButton.ctx=ctx; gameSelectButton.draw(); }
     if(focusGameButton){ focusGameButton.ctx=ctx; focusGameButton.draw(); }
+    if(handEyeButton){ handEyeButton.ctx=ctx; handEyeButton.draw(); }
     if(settingsButton){ settingsButton.ctx=ctx; settingsButton.draw(); }
     gamesAnimationId = requestAnimationFrame(animateGamesIntro);
 }
