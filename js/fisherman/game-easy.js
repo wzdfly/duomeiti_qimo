@@ -8,12 +8,26 @@ let playing=false;
 let fishes=[];
 let score=0;
 let timeLeft=30;
-let hook={x:W/2,y:80,drop:false,length:0};
+// Hook state machine: swing -> drop -> retrieve -> (score) -> swing
+let hook={
+    x:W/2, 
+    y:80, 
+    angle:0, 
+    length:30, 
+    state:'swing', 
+    speed: 0,
+    caughtFish: null
+};
 let paused=false;
 let pauseBtn=null;
 let restartBtn=null;
 let backBtn=null;
 let waveT=0;
+
+// Config for Easy Mode
+const SWING_SPEED = 0.03;
+const DROP_SPEED = 300;
+const RETRIEVE_SPEED = 400;
 
   // Load main menu BGM
   const bgm = new Audio('../../audio/bgm.ogg');
@@ -36,13 +50,28 @@ let waveT=0;
   lastTime=0; // Reset timer
   fishes=createFishes(6); // Reduced count
   paused=false;
-  hook.x=W/2; hook.y=80; hook.drop=false; hook.length=0;
-  const bw=80,bh=35;
-  const startX = W/2 - (bw*3 + 20)/2 + 100; // Center + offset right
-  // Style: flat buttons
-  pauseBtn=new CanvasButton(ctx,startX,10,bw,bh,'暂停','rgba(255,152,0,0.8)','#fff','flat');
-  restartBtn=new CanvasButton(ctx,startX+bw+10,10,bw,bh,'重来','rgba(76,175,80,0.8)','#fff','flat');
-  backBtn=new CanvasButton(ctx,startX+(bw+10)*2,10,bw,bh,'返回','rgba(33,150,243,0.8)','#fff','flat');
+  
+  // Reset Hook
+  hook = {
+      x: W/2,
+      y: 80,
+      angle: 0,
+      length: 30,
+      state: 'swing',
+      speed: 0,
+      caughtFish: null
+  };
+
+  // Age-friendly: Larger buttons and text
+  const bw=120,bh=50; 
+  const startX = W/2 - (bw*3 + 20)/2 + 100; // Recalculate center
+  // Style: gradient buttons with larger font - Modern Soft Colors
+  // Pause: Warm Orange (Coral)
+  pauseBtn=new CanvasButton(ctx,startX,10,bw,bh,'暂停','#FF8A65','#D84315', 36);
+  // Restart: Fresh Teal/Green
+  restartBtn=new CanvasButton(ctx,startX+bw+10,10,bw,bh,'重来','#4DB6AC','#00695C', 36);
+  // Back: Cool Blue/Indigo
+  backBtn=new CanvasButton(ctx,startX+(bw+10)*2,10,bw,bh,'返回','#7986CB','#283593', 36);
   canvas.onclick=function(e){
     const {x,y}=windowToCanvas(canvas,e.clientX,e.clientY);
     
@@ -86,9 +115,8 @@ let waveT=0;
     if(paused) return;
     
     // Game logic: drop hook
-    if(timeLeft > 0){
-        hook.x=x;
-        if(!hook.drop){ hook.drop=true; }
+    if(timeLeft > 0 && hook.state === 'swing'){
+        hook.state = 'drop';
     }
   };
   canvas.onmousemove=function(e){
@@ -98,8 +126,6 @@ let waveT=0;
     if(restartBtn && restartBtn.setHovered(restartBtn.contains(x,y))) changed=true;
     if(backBtn && backBtn.setHovered(backBtn.contains(x,y))) changed=true;
     if(changed) animateButtons(draw,[pauseBtn,restartBtn,backBtn]);
-    if(paused) return;
-    if(!hook.drop) hook.x=x;
   };
   draw();
   requestAnimationFrame(loop);
@@ -111,15 +137,16 @@ function createFishes(n){
     const y=H*0.35+Math.random()*H*0.55;
     const dir=Math.random()<0.5?-1:1;
     const x=dir<0?W+Math.random()*W:-Math.random()*W;
-    // Speed increased (80-140), Larger radius (35-50)
-    const s=80+Math.random()*60;
-    const r=35+Math.random()*15;
+    // Age-friendly: Slower speed (60-100), Larger radius (45-60)
+    const s=60+Math.random()*40;
+    const r=45+Math.random()*15;
     arr.push({x,y,dir,speed:s,radius:r,caught:false,type:'fish'});
   }
   return arr;
 }
 
 let lastTime=0;
+let timeAccumulator = 0;
 
 function loop(ts){
   if(!lastTime) lastTime=ts;
@@ -139,7 +166,6 @@ function update(dt){
   if(timeLeft<=0){
      timeLeft=0;
      playing=false; 
-     // bgm.pause(); // Keep music playing
      
      // Save score
      try {
@@ -155,45 +181,81 @@ function update(dt){
   
   timeLeft=Math.max(0,timeLeft-dt);
   waveT+=dt;
+  timeAccumulator+=dt;
 
+  // Update Fishes
   for(const f of fishes){
     if(f.caught) continue;
     f.x+=f.dir*f.speed*dt;
     if(f.dir<0 && f.x<-60){ f.x=W+60; }
     if(f.dir>0 && f.x>W+60){ f.x=-60; }
   }
-  if(hook.drop){
-    hook.length+=480*dt;
-    if(hook.length>H-120){ 
-        hook.drop=false; 
-        hook.length=0;
-        wrongSound.currentTime = 0;
-        wrongSound.play().catch(e=>{}); 
-    }
-    const hx=hook.x;
-    const hy=hook.y+hook.length;
-    for(const f of fishes){
-      if(f.caught) continue;
-      const dx=hx-f.x;
-      const dy=hy-f.y;
-      if(dx*dx+dy*dy<(f.radius+8)*(f.radius+8)){
-        // Play sound
-        correctSound.currentTime = 0;
-        correctSound.play().catch(e=>{});
 
-        // Respawn fish immediately
-        f.y=H*0.35+Math.random()*H*0.55;
-        f.dir=Math.random()<0.5?-1:1;
-        f.x=f.dir<0?W+60:-60;
-        f.speed=80+Math.random()*60; 
-        f.radius=35+Math.random()*15;
-
-        score+=10;
-        hook.drop=false;
-        hook.length=0;
-        break;
-      }
-    }
+  // Hook State Machine
+  switch(hook.state) {
+      case 'swing':
+          // Automatic swinging
+          hook.angle = Math.sin(timeAccumulator * 2) * 1.2; // +/- 1.2 radians
+          hook.length = 30;
+          break;
+          
+      case 'drop':
+          hook.length += DROP_SPEED * dt;
+          
+          // Calculate current hook position
+          let hx = hook.x + Math.sin(hook.angle) * hook.length;
+          let hy = hook.y + Math.cos(hook.angle) * hook.length;
+          
+          // Check bounds
+          if(hook.length > H || hx < 0 || hx > W || hy > H) {
+              hook.state = 'retrieve';
+              // Play miss sound if needed
+          }
+          
+          // Check collisions
+          for(const f of fishes){
+            if(f.caught) continue;
+            const dx = hx - f.x;
+            const dy = hy - f.y;
+            if(dx*dx + dy*dy < (f.radius+10)*(f.radius+10)){
+                // Caught!
+                hook.state = 'retrieve';
+                hook.caughtFish = f;
+                f.caught = true;
+                
+                correctSound.currentTime = 0;
+                correctSound.play().catch(e=>{});
+                break;
+            }
+          }
+          break;
+          
+      case 'retrieve':
+          hook.length -= RETRIEVE_SPEED * dt;
+          if(hook.caughtFish) {
+              // Sync fish position to hook
+              hook.caughtFish.x = hook.x + Math.sin(hook.angle) * hook.length;
+              hook.caughtFish.y = hook.y + Math.cos(hook.angle) * hook.length;
+          }
+          
+          if(hook.length <= 30) {
+              hook.length = 30;
+              if(hook.caughtFish) {
+                  score += 10;
+                  // Respawn fish
+                  let f = hook.caughtFish;
+                  f.caught = false;
+                  f.y=H*0.35+Math.random()*H*0.55;
+                  f.dir=Math.random()<0.5?-1:1;
+                  f.x=f.dir<0?W+60:-60;
+                  f.speed=60+Math.random()*40; 
+                  f.radius=45+Math.random()*15;
+                  
+                  hook.caughtFish = null;
+              }
+              hook.state = 'swing';
+          }
+          break;
   }
 }
 
@@ -204,54 +266,127 @@ function draw(){
 }
 
 function drawScene(){
+  let isNightMode = false;
+  try {
+      isNightMode = localStorage.getItem('theme') === 'night';
+  } catch(e) {}
+
   let g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#cbe7ff');
-  g.addColorStop(0.3,'#9bd4ff');
-  g.addColorStop(0.6,'#66c3ff');
-  g.addColorStop(1,'#3aa9f0');
+  if(isNightMode) {
+      g.addColorStop(0, '#0a192f');
+      g.addColorStop(0.5, '#112240');
+      g.addColorStop(1, '#233554');
+  } else {
+      g.addColorStop(0,'#cbe7ff');
+      g.addColorStop(0.3,'#9bd4ff');
+      g.addColorStop(0.6,'#66c3ff');
+      g.addColorStop(1,'#3aa9f0');
+  }
   ctx.fillStyle=g;
   ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='rgba(255,255,255,0.7)';
-  ctx.fillRect(0,0,W,H*0.25);
+
+  if(isNightMode) {
+      // Moon
+      ctx.save();
+      ctx.fillStyle = '#FFEB3B';
+      ctx.shadowColor = '#FFF59D';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(W - 60, 60, 25, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+  } else {
+      ctx.fillStyle='rgba(255,255,255,0.7)';
+      ctx.fillRect(0,0,W,H*0.25);
+  }
+
+  // Draw Boat/Base
   ctx.fillStyle='#795548';
-  ctx.fillRect(W/2-4,0,8,80);
-  ctx.strokeStyle='#455A64';
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(W/2,80);
-  ctx.lineTo(W/2+60,40);
-  ctx.stroke();
+  ctx.fillRect(W/2-4,0,8,80); // Pole
   
   // Dynamic Sea - Better Gradient
   let seaG = ctx.createLinearGradient(0, H*0.3, 0, H);
-  seaG.addColorStop(0, '#29B6F6'); // Light Blue surface
-  seaG.addColorStop(0.4, '#039BE5'); // Mid Blue
-  seaG.addColorStop(1, '#01579B'); // Deep Dark Blue
+  if(isNightMode) {
+      seaG.addColorStop(0, '#1A237E');
+      seaG.addColorStop(0.5, '#283593');
+      seaG.addColorStop(1, '#303F9F');
+  } else {
+      seaG.addColorStop(0, '#29B6F6'); // Light Blue surface
+      seaG.addColorStop(0.4, '#039BE5'); // Mid Blue
+      seaG.addColorStop(1, '#01579B'); // Deep Dark Blue
+  }
   ctx.fillStyle = seaG;
   ctx.fillRect(0, H*0.3, W, H*0.7);
 
   // Realistic Waves (Multi-layered)
   // Layer 1: Back (Darker, Slower)
-  drawWaveLayer(ctx, W, H, waveT * 0.5, 20, 'rgba(1, 87, 155, 0.3)', 15);
+  let w1 = isNightMode ? 'rgba(255,255,255,0.05)' : 'rgba(1, 87, 155, 0.3)';
+  drawWaveLayer(ctx, W, H, waveT * 0.5, 20, w1, 15);
   // Layer 2: Mid (Medium)
-  drawWaveLayer(ctx, W, H, waveT * 0.8, 10, 'rgba(3, 169, 244, 0.2)', 10);
+  let w2 = isNightMode ? 'rgba(255,255,255,0.08)' : 'rgba(3, 169, 244, 0.2)';
+  drawWaveLayer(ctx, W, H, waveT * 0.8, 10, w2, 10);
   // Layer 3: Front (Lighter, Faster)
-  drawWaveLayer(ctx, W, H, waveT * 1.2, 0, 'rgba(179, 229, 252, 0.2)', 5);
+  let w3 = isNightMode ? 'rgba(255,255,255,0.1)' : 'rgba(179, 229, 252, 0.2)';
+  drawWaveLayer(ctx, W, H, waveT * 1.2, 0, w3, 5);
 
-  // Sea Floor Decorations (Coral & Rocks)
-  // Static decorations, but we redraw them every frame. 
-  // In a complex engine we'd cache this, but here it's fine.
+  // Sea Floor Decorations
   drawEnvironment(ctx, W, H, waveT);
 
+  // Fishes
   for(const f of fishes){
-    if(f.caught) continue;
+    if(f.caught) continue; // Don't draw normally if caught (drawn with hook)
+    drawFish(f);
+  }
+
+  // Draw Hook Line
+  let hx = hook.x + Math.sin(hook.angle) * hook.length;
+  let hy = hook.y + Math.cos(hook.angle) * hook.length;
+
+  ctx.strokeStyle = isNightMode ? '#ECEFF1' : '#263238';
+  ctx.lineWidth=4; 
+  ctx.beginPath();
+  ctx.moveTo(hook.x, hook.y);
+  ctx.lineTo(hx, hy);
+  ctx.stroke();
+
+  // Draw Hook Head
+  ctx.save();
+  ctx.translate(hx, hy);
+  ctx.rotate(-hook.angle); // Rotate hook to match line
+  
+  ctx.fillStyle = isNightMode ? '#ECEFF1' : '#263238';
+  ctx.beginPath();
+  ctx.arc(0, 0, 10, 0, Math.PI*2);
+  ctx.fill();
+
+  // If caught fish, draw it here
+  if(hook.caughtFish) {
+      ctx.save();
+      ctx.rotate(Math.PI/2); // Fish hangs vertically
+      // Reset fish transform to draw relative to hook
+      let f = hook.caughtFish;
+      // Temporarily set pos to 0,0 for drawing
+      let oldX = f.x, oldY = f.y;
+      f.x = 0; f.y = 15; // Hang slightly below
+      drawFish(f);
+      f.x = oldX; f.y = oldY;
+      ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawFish(f) {
     ctx.save();
     ctx.translate(f.x,f.y);
-    if(f.dir<0) ctx.scale(-1,1); // Flip if moving left
+    if(f.dir<0 && !f.caught) ctx.scale(-1,1); // Flip if moving left
+    
+    // Body
     ctx.fillStyle='#ff7043';
     ctx.beginPath();
     ctx.ellipse(0,0,f.radius,f.radius*0.6,0,0,Math.PI*2);
     ctx.fill();
+    
+    // Tail
     ctx.fillStyle='#ef6c00';
     ctx.beginPath();
     ctx.moveTo(-f.radius,f.radius*0.1);
@@ -259,35 +394,33 @@ function drawScene(){
     ctx.lineTo(-f.radius,f.radius*-0.1);
     ctx.closePath();
     ctx.fill();
+    
+    // Eye
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(f.radius*0.6, -f.radius*0.1, 4, 0, Math.PI*2);
+    ctx.fill();
+
     ctx.restore();
-  }
-  ctx.strokeStyle='#263238';
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(hook.x,hook.y);
-  ctx.lineTo(hook.x,hook.y+hook.length);
-  ctx.stroke();
-  ctx.fillStyle='#263238';
-  ctx.beginPath();
-  ctx.arc(hook.x,hook.y+hook.length,6,0,Math.PI*2);
-  ctx.fill();
 }
 
 function drawHUD(){
-  ctx.fillStyle='#000';
-  ctx.font='bold 28px Microsoft YaHei';
+  let isNightMode = false;
+  try { isNightMode = localStorage.getItem('theme') === 'night'; } catch(e) {}
+  ctx.fillStyle = isNightMode ? '#FFFFFF' : '#000';
+  ctx.font='bold 36px Microsoft YaHei'; // Larger font
   ctx.textAlign='left';
-  ctx.fillText('初级模式 - 得分: '+score,20,40);
+  ctx.fillText('初级模式 - 得分: '+score,20,50);
   ctx.textAlign='right';
-  ctx.fillText('剩余时间: '+Math.ceil(timeLeft),W-20,40);
+  ctx.fillText('剩余时间: '+Math.ceil(timeLeft),W-20,50);
   ctx.textAlign='center';
   
   if(timeLeft<=0){
       ctx.save();
       ctx.fillStyle='rgba(0,0,0,0.5)';
-      ctx.fillRect(0, H/2 - 40, W, 80);
+      ctx.fillRect(0, H/2 - 60, W, 120); // Larger background
       ctx.fillStyle='#fff';
-      ctx.font='bold 48px Microsoft YaHei';
+      ctx.font='bold 64px Microsoft YaHei'; // Larger game over text
       ctx.textAlign='center';
       ctx.textBaseline='middle';
       ctx.fillText('游戏结束', W/2, H/2);
@@ -301,13 +434,6 @@ function drawHUD(){
 
 function endGame(){
   playing=false;
-  // Don't stop the loop completely, just stop game logic updates
-  // We need the loop to keep drawing buttons and handling hover effects
-  // But we stop fish movement and hook logic
-  
-  // Draw semi-transparent overlay to indicate game over
-  // but keep top buttons visible/clickable
-  // We can just draw "Game Over" text
 }
 
 function drawWaveLayer(ctx, W, H, t, yOffset, color, amp) {
@@ -381,8 +507,7 @@ function drawCoral(ctx, x, y, size, color, type) {
     } else if (type === 'tube') {
         // Tubes
         for(let i=-2; i<=2; i++) {
-            let h = size * (0.8 + Math.random()*0.4); // This random flickers, better to be deterministic?
-            // Actually, Math.random() in draw loop flickers. Use hash or fixed values.
+            let h = size * (0.8 + Math.random()*0.4); 
             // Simplified for stability:
             let stableRandom = Math.abs(Math.sin(i*123)); 
             h = size * (0.6 + stableRandom*0.6);

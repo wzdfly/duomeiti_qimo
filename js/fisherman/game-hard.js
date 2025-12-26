@@ -21,6 +21,13 @@ let waveT=0;
   const correctSound = new Audio('../../audio/correct.mp3');
   const wrongSound = new Audio('../../audio/wrong.mp3');
 
+  let timeAccumulator = 0;
+
+  // Config for Hard Mode
+  const SWING_SPEED_FACTOR = 4; // Very Fast swing
+  const DROP_SPEED = 600;
+  const RETRIEVE_SPEED = 700;
+
   function startGame(){
     playing=true;
     
@@ -32,81 +39,96 @@ let waveT=0;
     }
 
     score=0;
-  timeLeft=30;
-  lastTime=0; // Reset timer
-  fishes=createFishes(15); // Many creatures
-  paused=false;
-  hook.x=W/2; hook.y=80; hook.drop=false; hook.length=0;
-
-  // Init buttons
-  const bw=80,bh=35;
-  const startX = W/2 - (bw*3 + 20)/2 + 100; // Center + offset right
-  // Style: flat buttons
-  pauseBtn=new CanvasButton(ctx,startX,10,bw,bh,'暂停','rgba(255,152,0,0.8)','#fff','flat');
-  restartBtn=new CanvasButton(ctx,startX+bw+10,10,bw,bh,'重来','rgba(76,175,80,0.8)','#fff','flat');
-  backBtn=new CanvasButton(ctx,startX+(bw+10)*2,10,bw,bh,'返回','rgba(33,150,243,0.8)','#fff','flat');
-
-  canvas.onclick=function(e){
-    const {x,y}=windowToCanvas(canvas,e.clientX,e.clientY);
+    timeLeft=30;
+    lastTime=0; // Reset timer
+    timeAccumulator = 0;
+    fishes=createFishes(15); // Many creatures
+    paused=false;
     
-    // Prevent event bubbling
-    e.stopPropagation();
-    e.preventDefault();
+    // Hook state machine: swing -> drop -> retrieve -> (score) -> swing
+    hook = {
+        x: W/2, 
+        y: 80, 
+        angle: 0, 
+        length: 30, 
+        state: 'swing', 
+        speed: 0,
+        caughtFish: null
+    };
 
-    const col=getButtonColors('accent');
-    
-    if(pauseBtn && pauseBtn.isClicked(x,y)){
-      paused=!paused;
-      pauseBtn.text=paused?'继续':'暂停';
+    // Init buttons
+    // Age-friendly: Larger buttons (120x50) and text (36px) + beautified gradient
+    const bw=120,bh=50;
+    const startX = W/2 - (bw*3 + 20)/2 + 100; // Recalculate center
+    // Style: gradient buttons with larger font - Modern Soft Colors
+    // Pause: Warm Orange (Coral)
+    pauseBtn=new CanvasButton(ctx,startX,10,bw,bh,'暂停','#FF8A65','#D84315', 36);
+    // Restart: Fresh Teal/Green
+    restartBtn=new CanvasButton(ctx,startX+bw+10,10,bw,bh,'重来','#4DB6AC','#00695C', 36);
+    // Back: Cool Blue/Indigo
+    backBtn=new CanvasButton(ctx,startX+(bw+10)*2,10,bw,bh,'返回','#7986CB','#283593', 36);
+
+    canvas.onclick=function(e){
+      const {x,y}=windowToCanvas(canvas,e.clientX,e.clientY);
       
-      let musicOn = localStorage.getItem('fisherman_bgm') !== 'false';
-      if(musicOn) {
-          if(paused) bgm.pause();
-          else bgm.play();
+      // Prevent event bubbling
+      e.stopPropagation();
+      e.preventDefault();
+
+      const col=getButtonColors('accent');
+      
+      if(pauseBtn && pauseBtn.isClicked(x,y)){
+        paused=!paused;
+        pauseBtn.text=paused?'继续':'暂停';
+        
+        let musicOn = localStorage.getItem('fisherman_bgm') !== 'false';
+        if(musicOn) {
+            if(paused) bgm.pause();
+            else bgm.play();
+        }
+        return;
       }
-      return;
-    }
-    if(restartBtn && restartBtn.isClicked(x,y)){
-      playing=false;
-      bgm.pause();
-      if(loopId){ cancelAnimationFrame(loopId); loopId=null; }
-      startGame();
-      return;
-    }
-    if(backBtn && backBtn.isClicked(x,y)){
-      playing=false;
-      bgm.pause();
-      bgm.currentTime = 0;
-      if(loopId){ cancelAnimationFrame(loopId); loopId=null; }
+      if(restartBtn && restartBtn.isClicked(x,y)){
+        playing=false;
+        bgm.pause();
+        if(loopId){ cancelAnimationFrame(loopId); loopId=null; }
+        startGame();
+        return;
+      }
+      if(backBtn && backBtn.isClicked(x,y)){
+        playing=false;
+        bgm.pause();
+        bgm.currentTime = 0;
+        if(loopId){ cancelAnimationFrame(loopId); loopId=null; }
+        
+        // Clean up
+        canvas.onclick=null; 
+        canvas.onmousemove=null;
+        
+        location.reload();
+        return;
+      }
+      if(paused) return;
       
-      // Clean up
-      canvas.onclick=null; 
-      canvas.onmousemove=null;
-      
-      location.reload();
-      return;
-    }
-    if(paused) return;
-    
-    // Game logic
-    if(timeLeft > 0){
-        hook.x=x;
-        if(!hook.drop){ hook.drop=true; }
-    }
-  };
-  canvas.onmousemove=function(e){
-    const {x,y}=windowToCanvas(canvas,e.clientX,e.clientY);
-    let changed=false;
-    if(pauseBtn && pauseBtn.setHovered(pauseBtn.contains(x,y))) changed=true;
-    if(restartBtn && restartBtn.setHovered(restartBtn.contains(x,y))) changed=true;
-    if(backBtn && backBtn.setHovered(backBtn.contains(x,y))) changed=true;
-    if(changed) animateButtons(draw,[pauseBtn,restartBtn,backBtn]);
-    if(paused) return;
-    if(!hook.drop) hook.x=x;
-  };
-  draw();
-  requestAnimationFrame(loop);
-}
+      // Game logic: Trigger Drop if swinging
+      if(timeLeft > 0 && hook.state === 'swing'){
+          hook.state = 'drop';
+          // Calculate speed vector if needed, or just use angle
+      }
+    };
+    canvas.onmousemove=function(e){
+      const {x,y}=windowToCanvas(canvas,e.clientX,e.clientY);
+      let changed=false;
+      if(pauseBtn && pauseBtn.setHovered(pauseBtn.contains(x,y))) changed=true;
+      if(restartBtn && restartBtn.setHovered(restartBtn.contains(x,y))) changed=true;
+      if(backBtn && backBtn.setHovered(backBtn.contains(x,y))) changed=true;
+      if(changed) animateButtons(draw,[pauseBtn,restartBtn,backBtn]);
+      if(paused) return;
+      // Hook follows mouse removed
+    };
+    draw();
+    requestAnimationFrame(loop);
+  }
 
 function createFishes(n){
   const arr=[];
@@ -174,6 +196,7 @@ function update(dt){
   
   timeLeft=Math.max(0,timeLeft-dt);
   waveT+=dt;
+  timeAccumulator += dt;
   
   for(const f of fishes){
     if(f.caught) continue;
@@ -181,71 +204,104 @@ function update(dt){
     if(f.dir<0 && f.x<-60){ f.x=W+60; }
     if(f.dir>0 && f.x>W+60){ f.x=-60; }
   }
-  if(hook.drop){
-    hook.length+=480*dt;
-    if(hook.length>H-120){ 
-        hook.drop=false; 
-        hook.length=0; 
-        wrongSound.currentTime = 0;
-        wrongSound.play().catch(e=>{});
-    }
-    const hx=hook.x;
-    const hy=hook.y+hook.length;
-    for(const f of fishes){
-      if(f.caught) continue;
-      const dx=hx-f.x;
-      const dy=hy-f.y;
-      if(dx*dx+dy*dy<(f.radius+8)*(f.radius+8)){
-        // Play sound based on type
-        if(f.type==='fish'){
-            correctSound.currentTime = 0;
-            correctSound.play().catch(e=>{});
-        } else {
-            wrongSound.currentTime = 0;
-            wrongSound.play().catch(e=>{});
-        }
 
-        // Calculate score based on caught type
-        if(f.type==='fish'){
-            score+=30;
-        } else if(f.type==='turtle'){
-            score-=20; // Deduct
-        } else if(f.type==='puffer'){
-            score-=50; // Deduct more
-        }
-
-        // Respawn with new type logic
-        f.y=H*0.35+Math.random()*H*0.55;
-        f.dir=Math.random()<0.5?-1:1;
-        f.x=f.dir<0?W+60:-60;
-        
-        // Determine type: 70% Fish, 20% Turtle, 10% Puffer
-        const rand=Math.random();
-        let type='fish';
-        if(rand>0.9) type='puffer';
-        else if(rand>0.7) type='turtle';
-        
-        let s, r;
-        if(type==='fish'){
-           s=120+Math.random()*100; // Fast
-           r=15+Math.random()*25; // Varied sizes
-        } else if(type==='turtle'){
-           s=60+Math.random()*40; // Slow
-           r=35;
-        } else { // puffer
-           s=100+Math.random()*50;
-           r=25;
-        }
-        f.type = type;
-        f.speed = s;
-        f.radius = r;
-        f.caught = false;
-
-        hook.drop=false;
-        hook.length=0;
-        break;
-      }
-    }
+  // Hook State Machine
+  switch(hook.state) {
+      case 'swing':
+          hook.angle = Math.sin(timeAccumulator * SWING_SPEED_FACTOR) * 1.2; 
+          hook.length = 30;
+          break;
+          
+      case 'drop':
+          hook.length += DROP_SPEED * dt;
+          
+          let hx = hook.x + Math.sin(hook.angle) * hook.length;
+          let hy = hook.y + Math.cos(hook.angle) * hook.length;
+          
+          // Check bounds
+          if(hook.length > H || hx < 0 || hx > W || hy > H) {
+              hook.state = 'retrieve';
+              wrongSound.currentTime = 0;
+              wrongSound.play().catch(e=>{});
+          }
+          
+          // Check collisions
+          for(const f of fishes){
+            if(f.caught) continue;
+            const dx = hx - f.x;
+            const dy = hy - f.y;
+            if(dx*dx + dy*dy < (f.radius+10)*(f.radius+10)){
+                hook.state = 'retrieve';
+                hook.caughtFish = f;
+                f.caught = true;
+                
+                // Play sound based on type
+                if(f.type==='fish'){
+                    correctSound.currentTime = 0;
+                    correctSound.play().catch(e=>{});
+                } else {
+                    wrongSound.currentTime = 0;
+                    wrongSound.play().catch(e=>{});
+                }
+                break;
+            }
+          }
+          break;
+          
+      case 'retrieve':
+          hook.length -= RETRIEVE_SPEED * dt;
+          if(hook.caughtFish) {
+              // Sync fish position to hook
+              hook.caughtFish.x = hook.x + Math.sin(hook.angle) * hook.length;
+              hook.caughtFish.y = hook.y + Math.cos(hook.angle) * hook.length;
+          }
+          
+          if(hook.length <= 30) {
+              hook.length = 30;
+              if(hook.caughtFish) {
+                  let f = hook.caughtFish;
+                  
+                  // Calculate score based on caught type
+                  if(f.type==='fish'){
+                      score+=30;
+                  } else if(f.type==='turtle'){
+                      score-=20; // Deduct
+                  } else if(f.type==='puffer'){
+                      score-=50; // Deduct more
+                  }
+                  
+                  // Respawn with new type logic
+                  f.y=H*0.35+Math.random()*H*0.55;
+                  f.dir=Math.random()<0.5?-1:1;
+                  f.x=f.dir<0?W+60:-60;
+                  
+                  // Determine type: 70% Fish, 20% Turtle, 10% Puffer
+                  const rand=Math.random();
+                  let type='fish';
+                  if(rand>0.9) type='puffer';
+                  else if(rand>0.7) type='turtle';
+                  
+                  let s, r;
+                  if(type==='fish'){
+                     s=120+Math.random()*100; // Fast
+                     r=15+Math.random()*25; // Varied sizes
+                  } else if(type==='turtle'){
+                     s=60+Math.random()*40; // Slow
+                     r=35;
+                  } else { // puffer
+                     s=100+Math.random()*50;
+                     r=25;
+                  }
+                  f.type = type;
+                  f.speed = s;
+                  f.radius = r;
+                  f.caught = false;
+                  
+                  hook.caughtFish = null;
+              }
+              hook.state = 'swing';
+          }
+          break;
   }
 }
 
@@ -256,15 +312,40 @@ function draw(){
 }
 
 function drawScene(){
+  let isNightMode = false;
+  try {
+      isNightMode = localStorage.getItem('theme') === 'night';
+  } catch(e) {}
+
   let g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#cbe7ff');
-  g.addColorStop(0.3,'#9bd4ff');
-  g.addColorStop(0.6,'#66c3ff');
-  g.addColorStop(1,'#3aa9f0');
+  if(isNightMode) {
+      g.addColorStop(0, '#0a192f');
+      g.addColorStop(0.5, '#112240');
+      g.addColorStop(1, '#233554');
+  } else {
+      g.addColorStop(0,'#cbe7ff');
+      g.addColorStop(0.3,'#9bd4ff');
+      g.addColorStop(0.6,'#66c3ff');
+      g.addColorStop(1,'#3aa9f0');
+  }
   ctx.fillStyle=g;
   ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='rgba(255,255,255,0.7)';
-  ctx.fillRect(0,0,W,H*0.25);
+
+  if(isNightMode) {
+      // Moon
+      ctx.save();
+      ctx.fillStyle = '#FFEB3B';
+      ctx.shadowColor = '#FFF59D';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(W - 60, 60, 25, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+  } else {
+      ctx.fillStyle='rgba(255,255,255,0.7)';
+      ctx.fillRect(0,0,W,H*0.25);
+  }
+
   ctx.fillStyle='#795548';
   ctx.fillRect(W/2-4,0,8,80);
   ctx.strokeStyle='#455A64';
@@ -276,19 +357,28 @@ function drawScene(){
   
   // Dynamic Sea - Better Gradient
   let seaG = ctx.createLinearGradient(0, H*0.3, 0, H);
-  seaG.addColorStop(0, '#29B6F6'); // Light Blue surface
-  seaG.addColorStop(0.4, '#039BE5'); // Mid Blue
-  seaG.addColorStop(1, '#01579B'); // Deep Dark Blue
+  if(isNightMode) {
+      seaG.addColorStop(0, '#1A237E');
+      seaG.addColorStop(0.5, '#283593');
+      seaG.addColorStop(1, '#303F9F');
+  } else {
+      seaG.addColorStop(0, '#29B6F6'); // Light Blue surface
+      seaG.addColorStop(0.4, '#039BE5'); // Mid Blue
+      seaG.addColorStop(1, '#01579B'); // Deep Dark Blue
+  }
   ctx.fillStyle = seaG;
   ctx.fillRect(0, H*0.3, W, H*0.7);
 
   // Realistic Waves (Multi-layered)
   // Layer 1: Back (Darker, Slower)
-  drawWaveLayer(ctx, W, H, waveT * 0.5, 20, 'rgba(1, 87, 155, 0.3)', 15);
+  let w1 = isNightMode ? 'rgba(255,255,255,0.05)' : 'rgba(1, 87, 155, 0.3)';
+  drawWaveLayer(ctx, W, H, waveT * 0.5, 20, w1, 15);
   // Layer 2: Mid (Medium)
-  drawWaveLayer(ctx, W, H, waveT * 0.8, 10, 'rgba(3, 169, 244, 0.2)', 10);
+  let w2 = isNightMode ? 'rgba(255,255,255,0.08)' : 'rgba(3, 169, 244, 0.2)';
+  drawWaveLayer(ctx, W, H, waveT * 0.8, 10, w2, 10);
   // Layer 3: Front (Lighter, Faster)
-  drawWaveLayer(ctx, W, H, waveT * 1.2, 0, 'rgba(179, 229, 252, 0.2)', 5);
+  let w3 = isNightMode ? 'rgba(255,255,255,0.1)' : 'rgba(179, 229, 252, 0.2)';
+  drawWaveLayer(ctx, W, H, waveT * 1.2, 0, w3, 5);
 
   // Sea Floor Decorations (Coral & Rocks)
   // Static decorations, but we redraw them every frame. 
@@ -350,33 +440,41 @@ function drawScene(){
     
     ctx.restore();
   }
-  ctx.strokeStyle='#263238';
-  ctx.lineWidth=2;
+  ctx.strokeStyle = isNightMode ? '#ECEFF1' : '#263238';
+  ctx.lineWidth=4; // Thicker line
+  
+  // Calculate end point
+  let endX = hook.x + Math.sin(hook.angle) * hook.length;
+  let endY = hook.y + Math.cos(hook.angle) * hook.length;
+
   ctx.beginPath();
-  ctx.moveTo(hook.x,hook.y);
-  ctx.lineTo(hook.x,hook.y+hook.length);
+  ctx.moveTo(hook.x, hook.y);
+  ctx.lineTo(endX, endY);
   ctx.stroke();
-  ctx.fillStyle='#263238';
+  
+  ctx.fillStyle = isNightMode ? '#ECEFF1' : '#263238';
   ctx.beginPath();
-  ctx.arc(hook.x,hook.y+hook.length,6,0,Math.PI*2);
+  ctx.arc(endX, endY, 10, 0, Math.PI*2); // Larger hook
   ctx.fill();
 }
 
 function drawHUD(){
-  ctx.fillStyle='#000';
-  ctx.font='bold 28px Microsoft YaHei';
+  let isNightMode = false;
+  try { isNightMode = localStorage.getItem('theme') === 'night'; } catch(e) {}
+  ctx.fillStyle = isNightMode ? '#FFFFFF' : '#000';
+  ctx.font='bold 36px Microsoft YaHei'; // Larger font
   ctx.textAlign='left';
-  ctx.fillText('高级模式 - 得分: '+score,20,40);
+  ctx.fillText('高级模式 - 得分: '+score,20,50);
   ctx.textAlign='right';
-  ctx.fillText('剩余时间: '+Math.ceil(timeLeft),W-20,40);
+  ctx.fillText('剩余时间: '+Math.ceil(timeLeft),W-20,50);
   ctx.textAlign='center';
   
   if(timeLeft<=0){
       ctx.save();
       ctx.fillStyle='rgba(0,0,0,0.5)';
-      ctx.fillRect(0, H/2 - 40, W, 80);
+      ctx.fillRect(0, H/2 - 60, W, 120); // Larger background
       ctx.fillStyle='#fff';
-      ctx.font='bold 48px Microsoft YaHei';
+      ctx.font='bold 64px Microsoft YaHei'; // Larger Game Over text
       ctx.textAlign='center';
       ctx.textBaseline='middle';
       ctx.fillText('游戏结束', W/2, H/2);

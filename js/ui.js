@@ -40,10 +40,10 @@ class CanvasButton{                                     // 画布按钮组件
         grad.addColorStop(0,this.color1);               // 渐变顶部色
         grad.addColorStop(1,this.color2);               // 渐变底部色
         ctx.fillStyle=grad;                             // 设置填充
-        ctx.shadowColor="rgba(0,0,0,0.4)";              // 阴影颜色
-        ctx.shadowBlur=8; ctx.shadowOffsetX=2;          // 阴影模糊与偏移
-        ctx.shadowOffsetY=2;                            // 阴影 Y 偏移
-        roundRect(ctx,x,y,w,h,this.radius,true,true);   // 绘制圆角按钮
+        ctx.shadowColor="rgba(0,0,0,0.2)";              // 阴影颜色（减淡）
+        ctx.shadowBlur=6; ctx.shadowOffsetX=2;          // 阴影模糊与偏移
+        ctx.shadowOffsetY=3;                            // 阴影 Y 偏移
+        roundRect(ctx,x,y,w,h,this.radius,true,false);  // 绘制圆角按钮（无描边）
         ctx.shadowColor="transparent";                  // 关闭阴影
         ctx.fillStyle="#fff";                           // 文本颜色
         ctx.font="bold 28px Microsoft YaHei";           // 文本字体大小
