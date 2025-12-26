@@ -52,7 +52,7 @@ function bindGamesEvents(){
         }
         if(focusGameButton && focusGameButton.isClicked(x,y)){
             stopGamesAnimation();
-            if(window.startFocusGame) window.startFocusGame();
+            if(window.showFocusStartScreen) window.showFocusStartScreen();
             return;
         }
         if(settingsButton && settingsButton.isClicked(x,y)){
