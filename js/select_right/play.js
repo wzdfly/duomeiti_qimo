@@ -31,9 +31,9 @@ const FocusGame = {
     },
 
     // 初始化游戏
-    init: function() {
+    init: function(startLevel = 1) {
         this.score = 0;
-        this.level = 1;
+        this.level = startLevel;
         
         // 初始化按钮
         const backColors = getButtonColors('neutral');
@@ -288,6 +288,9 @@ const FocusGame = {
         this.isPlaying = false;
         this.stop(); // 停止循环
         
+        // 保存记录
+        if(typeof saveFocusRecord === 'function') saveFocusRecord(this.score);
+
         // 强制重绘最后一帧以确保显示正确（如时间归零）
         this.draw();
         
@@ -406,6 +409,6 @@ const FocusGame = {
 };
 
 // 暴露全局入口
-window.startFocusGame = function() {
-    FocusGame.init();
+window.startFocusGame = function(level = 1) {
+    FocusGame.init(level);
 };
