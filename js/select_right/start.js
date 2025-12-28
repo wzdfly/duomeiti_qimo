@@ -1,9 +1,14 @@
 
 function showFocusStartScreen(){
     ctx.clearRect(0,0,W,H);
-    // 使用全局 image (bg/bg_night)
-    if(image.complete) ctx.drawImage(image,0,0,W,H);
-    else image.onload = function(){ ctx.drawImage(image,0,0,W,H); showFocusStartScreen(); };
+    // 使用全局 image (bg/bg_night) 或 FocusGame.bgDay (日间模式)
+    let bgImg = image;
+    if (typeof currentTheme !== 'undefined' && currentTheme !== 'night' && typeof FocusGame !== 'undefined' && FocusGame.bgDay) {
+        bgImg = FocusGame.bgDay;
+    }
+
+    if(bgImg.complete) ctx.drawImage(bgImg,0,0,W,H);
+    else bgImg.onload = function(){ ctx.drawImage(bgImg,0,0,W,H); showFocusStartScreen(); };
 
     ctx.fillStyle = getTextColor('title'); 
     ctx.font = 'bold 60px Microsoft YaHei';
