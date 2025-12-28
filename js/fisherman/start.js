@@ -10,7 +10,7 @@ window.initFishermanStartScreen=function(){
   startScreen();
 
   function startScreen(){
-    waveT=0;
+    waveT=0;//在整个菜单界面中，用于动画的时间参数
     const col=getButtonColors('primary');
     const bw=200,bh=70;
     
@@ -44,11 +44,17 @@ window.initFishermanStartScreen=function(){
     }
 
     const buttons = [easyBtn, mediumBtn, hardBtn, backBtn, rankBtn, musicBtn, tutorialBtn];
+    //按钮放在数组里方便操作
 
     let showRank = false;
+    /*
+    排行榜按钮的点击事件
+    点击后，显示排行榜界面，同时隐藏其他按钮
+    */
     
     // Initialize from localStorage to persist state across reloads
     let isNightMode = false;
+    //保证页面启动时 isNightMode 有正确值，优先使用本地存储，其次使用全局变量，否则默认白天模式
     try {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) {
@@ -136,7 +142,7 @@ window.initFishermanStartScreen=function(){
     }
 
 
-    function drawSpeaker(ctx, x, y, size, on) {
+    function drawSpeaker(ctx, x, y, size, on) {//扬声器
         ctx.save();
         ctx.translate(x, y);
         ctx.fillStyle = '#333';
@@ -347,9 +353,9 @@ window.initFishermanStartScreen=function(){
         const y=H*0.40+j*24;
         ctx.beginPath();
         for(let x=0;x<=W;x+=12){
-          const k=0.8+0.1*j;
-          const a=6+j*0.5;
-          const sy=y+Math.sin((x*0.02)+(waveT*k))*a;
+          const k=0.8+0.1*j;//波动频率因子
+          const a=6+j*0.5;//波动振幅    
+          const sy=y+Math.sin((x*0.02)+(waveT*k))*a;//计算当前点的y坐标
           if(x===0) ctx.moveTo(x,sy); else ctx.lineTo(x,sy);
         }
         ctx.stroke();

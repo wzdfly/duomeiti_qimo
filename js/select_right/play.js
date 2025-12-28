@@ -201,6 +201,11 @@ const FocusGame = {
 
     // 游戏主循环启动
     startGameLoop: function() {
+        // 防止重复启动循环
+        if (this.loopId) {
+            this.stop();
+        }
+        
         this.startLevel();
         this.lastFrameTime = performance.now();
         this.loopId = requestAnimationFrame((ts) => this.loop(ts));
@@ -244,6 +249,9 @@ const FocusGame = {
     },
 
     update: function(dt) {
+        // 限制最大 dt，防止画面跳跃 (最大允许 0.1秒)
+        if (dt > 0.1) dt = 0.1;
+
         // 动画逻辑
         if (this.isLevelTransition && this.animatingItem) {
             this.animatingProgress += dt * 1.5; // 约0.7秒完成
