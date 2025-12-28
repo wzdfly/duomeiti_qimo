@@ -24,7 +24,14 @@ function startMemoryMode(){                            // 记忆模式：预览�
     gridNumbers = Array.from({length: total}, (_, i)=>i+1).sort(()=>Math.random()-0.5);
     cellStates = Array(total).fill(0);
     currentNumber = 1; gameTimer = 0;
-    currentMode = 'memory'; numbersHidden = false; memoryCountdownValue = 10;
+    currentMode = 'memory'; numbersHidden = false; 
+    
+    // 设定记忆倒计时：第1关10秒，第2关20秒，第3关30秒
+    if(currentLevel === 1) memoryCountdownValue = 10;
+    else if(currentLevel === 2) memoryCountdownValue = 20;
+    else if(currentLevel === 3) memoryCountdownValue = 30;
+    else memoryCountdownValue = 10; // 默认
+    
     hintText = ""; // 清空提示
     if(bgMusic.paused) bgMusic.play();
     drawGameGrid(); bindGamePageEvents();
@@ -160,7 +167,14 @@ function bindGamePageEvents(){                         // 游戏页点击与悬�
             if(gameInterval){ clearInterval(gameInterval); gameInterval=null; }
             if(memoryCountdownInterval){ clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; }
             if(currentMode==='memory'){
-                numbersHidden=false; memoryCountdownValue=10; drawGameGrid();
+                numbersHidden=false; 
+                // 刷新时重置为对应的倒计时
+                if(currentLevel === 1) memoryCountdownValue = 10;
+                else if(currentLevel === 2) memoryCountdownValue = 20;
+                else if(currentLevel === 3) memoryCountdownValue = 30;
+                else memoryCountdownValue = 10;
+                
+                drawGameGrid();
                 memoryCountdownInterval=setInterval(()=>{
                     memoryCountdownValue--; drawGameGrid();
                     if(memoryCountdownValue<=0){ clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; numbersHidden=true; startGameTimer(); drawGameGrid(); }
