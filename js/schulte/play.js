@@ -1,6 +1,9 @@
 // 文件作用：游戏网格绘制与交互，含返回主页面
 
 function startSchulteGame(){                           // 初始化并进入游戏页
+    // 强制清除可能残留的悬停事件，防止幽灵重绘
+    canvas.onmousemove = null;
+    
     const spec = levelsSpec[currentLevel] || levelsSpec[1];
     gridRows = spec.rows; gridCols = spec.cols; gridSize = spec.size;
     const total = gridRows * gridCols;
@@ -12,6 +15,9 @@ function startSchulteGame(){                           // 初始化并进入游�
 }
 
 function startMemoryMode(){                            // 记忆模式：预览后隐藏数字
+    // 强制清除可能残留的悬停事件，防止幽灵重绘
+    canvas.onmousemove = null;
+
     const spec = levelsSpec[currentLevel] || levelsSpec[1];
     gridRows = spec.rows; gridCols = spec.cols; gridSize = spec.size;
     const total = gridRows * gridCols;
@@ -19,6 +25,7 @@ function startMemoryMode(){                            // 记忆模式：预览�
     cellStates = Array(total).fill(0);
     currentNumber = 1; gameTimer = 0;
     currentMode = 'memory'; numbersHidden = false; memoryCountdownValue = 10;
+    hintText = ""; // 清空提示
     if(bgMusic.paused) bgMusic.play();
     drawGameGrid(); bindGamePageEvents();
     if(memoryCountdownInterval) { clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; }
@@ -26,7 +33,7 @@ function startMemoryMode(){                            // 记忆模式：预览�
         memoryCountdownValue--; drawGameGrid();
         if(memoryCountdownValue<=0){
             clearInterval(memoryCountdownInterval); memoryCountdownInterval=null;
-            numbersHidden = true; startGameTimer(); drawGameGrid();
+            numbersHidden = true; hintText = ""; startGameTimer(); drawGameGrid();
         }
     },1000);
 }
@@ -102,11 +109,48 @@ function startGameTimer(){                             // 启动游戏计时器�
 
 function bindGamePageEvents(){                         // 游戏页点击与悬停事件
     canvas.onclick=function(e){                        // 点击事件
+        // 注意：不要在这里清除 onmousemove，否则会导致按钮悬停效果失效
+        // bindGamePageEvents 已经设置了正确的 onmousemove
+
         const {x,y}=windowToCanvas(canvas,e.clientX,e.clientY); // 坐标换算
         if(gameBackButton.isClicked(x,y)){             // 点击返回
-            if(gameInterval){ clearInterval(gameInterval); gameInterval=null; } // 停止计时
-            if(memoryCountdownInterval){ clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; } // 停止预览倒计时
-            stopFlash(); hintText=""; returnToMainMenu(); return; // 清理并返回主页面
+            // 暂停游戏逻辑
+            if(gameInterval){ clearInterval(gameInterval); gameInterval=null; }
+            if(memoryCountdownInterval){ clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; }
+            
+            // 弹出确认框
+            const snapshot = ctx.getImageData(0, 0, W, H);
+            const dialog = new CanvasDialog(ctx, "退出游戏", "确定要返回主菜单吗？", 400, 220, false, snapshot);
+            
+            dialog.show(
+                () => { // 确定 -> 退出
+                    stopFlash(); hintText=""; returnToMainMenu();
+                },
+                () => { // 取消 -> 恢复
+                    // 恢复事件绑定
+                    bindGamePageEvents();
+                    
+                    // 恢复计时器
+                    if(currentMode==='memory' && !numbersHidden){
+                        // 记忆模式预览阶段
+                         if(memoryCountdownValue > 0) {
+                             memoryCountdownInterval = setInterval(()=>{
+                                memoryCountdownValue--; drawGameGrid();
+                                if(memoryCountdownValue<=0){ 
+                                    clearInterval(memoryCountdownInterval); memoryCountdownInterval=null; 
+                                    numbersHidden=true; startGameTimer(); drawGameGrid(); 
+                                }
+                            },1000);
+                         }
+                    } else if (!numbersHidden || currentMode !== 'memory') {
+                        // 游戏进行阶段 (Schulte 或 Memory 猜测阶段)
+                        // 注意：如果游戏已经结束或尚未开始计时，不应盲目启动
+                        // 这里简单判断：只要不是在预览倒计时，就认为是游戏进行中
+                        startGameTimer();
+                    }
+                }
+            );
+            return;
         }
         if(gameRefreshButton.isClicked(x,y)){          // 点击刷新
             const total = gridRows * gridCols;
@@ -127,6 +171,8 @@ function bindGamePageEvents(){                         // 游戏页点击与悬�
             return;
         }
         if(currentMode==='memory' && !numbersHidden){   // 记忆模式预览阶段不响应格子点击
+            hintText = "请先记忆数字位置！";
+            drawGameGrid();
             return;                                     // 忽略点击
         }
         for(let i=0;i<gridRows;i++){                   // 遍历格子

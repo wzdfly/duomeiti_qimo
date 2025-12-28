@@ -63,7 +63,11 @@ function clearRecords(){
 let reactLevel1Btn, reactLevel2Btn, reactLevel3Btn;
 let memLevel1Btn, memLevel2Btn, memLevel3Btn;
 
+// 标志位：当前是否在关卡选择页面
+window.isLevelScreen = false;
+
 function showLevels(){
+    window.isLevelScreen = true;
     ctx.clearRect(0,0,W,H); 
     ctx.drawImage(image,0,0,W,H);
     
@@ -143,30 +147,43 @@ function showLevels(){
 
 function bindCurrentPageEvents(){
     if(backButton && clearRecordsButton){
+        // 辅助函数：离开关卡页面时清理状态
+        function exitLevelScreen() {
+            window.isLevelScreen = false;
+            levelScreenData = null;
+            canvas.onmousemove = null;
+        }
+
         canvas.onclick = function(e){
             const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
-            if(backButton.isClicked(x,y)) returnToMainMenu();
-            else if(clearRecordsButton.isClicked(x,y)) clearRecords();
+            if(backButton.isClicked(x,y)) { exitLevelScreen(); returnToMainMenu(); }
+            else if(clearRecordsButton.isClicked(x,y)) clearRecords(); // 弹窗不需要退出页面
             // 反应模式点击
-            else if(reactLevel1Btn.isClicked(x,y)){ currentLevel=1; currentMode='reaction'; startSchulteGame(); }
-            else if(reactLevel2Btn.isClicked(x,y)){ currentLevel=2; currentMode='reaction'; startSchulteGame(); }
-            else if(reactLevel3Btn.isClicked(x,y)){ currentLevel=3; currentMode='reaction'; startSchulteGame(); }
+            else if(reactLevel1Btn.isClicked(x,y)){ exitLevelScreen(); currentLevel=1; currentMode='reaction'; startSchulteGame(); }
+            else if(reactLevel2Btn.isClicked(x,y)){ exitLevelScreen(); currentLevel=2; currentMode='reaction'; startSchulteGame(); }
+            else if(reactLevel3Btn.isClicked(x,y)){ exitLevelScreen(); currentLevel=3; currentMode='reaction'; startSchulteGame(); }
             // 记忆模式点击
-            else if(memLevel1Btn.isClicked(x,y)){ currentLevel=1; currentMode='memory'; startMemoryMode(); }
-            else if(memLevel2Btn.isClicked(x,y)){ currentLevel=2; currentMode='memory'; startMemoryMode(); }
-            else if(memLevel3Btn.isClicked(x,y)){ currentLevel=3; currentMode='memory'; startMemoryMode(); }
+            else if(memLevel1Btn.isClicked(x,y)){ exitLevelScreen(); currentLevel=1; currentMode='memory'; startMemoryMode(); }
+            else if(memLevel2Btn.isClicked(x,y)){ exitLevelScreen(); currentLevel=2; currentMode='memory'; startMemoryMode(); }
+            else if(memLevel3Btn.isClicked(x,y)){ exitLevelScreen(); currentLevel=3; currentMode='memory'; startMemoryMode(); }
         };
         
         function redraw(){
-            ctx.putImageData(levelScreenData,0,0);
-            reactLevel1Btn.draw(); reactLevel2Btn.draw(); reactLevel3Btn.draw();
-            memLevel1Btn.draw(); memLevel2Btn.draw(); memLevel3Btn.draw();
-            backButton.draw(); clearRecordsButton.draw();
-        }
-        
-        canvas.onmousemove = function(e){
-            const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
-            const changed =
+        // 如果已经离开了关卡页面，就停止绘制
+        if (!window.isLevelScreen || !levelScreenData) return;
+
+        ctx.putImageData(levelScreenData,0,0);
+        reactLevel1Btn.draw(); reactLevel2Btn.draw(); reactLevel3Btn.draw();
+        memLevel1Btn.draw(); memLevel2Btn.draw(); memLevel3Btn.draw();
+        backButton.draw(); clearRecordsButton.draw();
+    }
+    
+    canvas.onmousemove = function(e){
+        // 双重保险
+        if (!window.isLevelScreen) return;
+
+        const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
+        const changed =
                 reactLevel1Btn.setHovered(reactLevel1Btn.contains(x,y)) ||
                 reactLevel2Btn.setHovered(reactLevel2Btn.contains(x,y)) ||
                 reactLevel3Btn.setHovered(reactLevel3Btn.contains(x,y)) ||

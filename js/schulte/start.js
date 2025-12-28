@@ -57,16 +57,45 @@ function showStartButtonCentered(){                    // 爆炸后显示模式�
 
     // 缓存静态像素用于悬停动画重绘
     startScreenData = ctx.getImageData(0,0,W,H);
+    
+    // 辅助函数：离开主菜单时清理状态
+    function exitStartScreen() {
+        window.isSchulteStartScreen = false;
+        startScreenData = null;
+        canvas.onmousemove = null;
+        canvas.onclick = null;
+    }
 
     canvas.onclick = function(e){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
-        if(reactionButton.isClicked(x,y)) { currentLevel=1; currentMode='reaction'; start(); }
-        else if(memoryButton.isClicked(x,y)) { currentLevel=1; currentMode='memory'; startMemoryMode(); }
-        else if(achievementsButton.isClicked(x,y)) showLevels();
-        else if(backMainButton.isClicked(x,y)) showGamesPage();
+        if(reactionButton.isClicked(x,y)) { 
+            // 反应模式需要播放倒计时，所以这里先只标记离开，start()函数会处理后续
+            // 但是 start() 本身就是从这里调用的，所以我们可以让 start() 来处理清理，或者在这里调用。
+            // 这里的 start() 是指下面的倒计时函数。
+            // start() 函数内部已经有清理逻辑了，所以这里直接调用 start() 是安全的。
+            currentLevel=1; currentMode='reaction'; start(); 
+        }
+        else if(memoryButton.isClicked(x,y)) { 
+            exitStartScreen(); // 必须清理！
+            currentLevel=1; currentMode='memory'; startMemoryMode(); 
+        }
+        else if(achievementsButton.isClicked(x,y)) {
+            exitStartScreen(); // 必须清理！
+            showLevels(); 
+        }
+        else if(backMainButton.isClicked(x,y)) {
+            exitStartScreen(); // 必须清理！
+            showGamesPage(); 
+        }
     };
 
+    // 标志位：当前是否在主菜单
+    window.isSchulteStartScreen = true;
+
     function redrawStartButtons(){
+        // 如果已经离开了主菜单，就强制停止绘制
+        if (!window.isSchulteStartScreen) return;
+        
         ctx.putImageData(startScreenData,0,0);
         reactionButton.draw();
         memoryButton.draw();
@@ -75,6 +104,9 @@ function showStartButtonCentered(){                    // 爆炸后显示模式�
     }
 
     canvas.onmousemove = function(e){
+        // 双重保险
+        if (!window.isSchulteStartScreen) return;
+        
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
         const changed = reactionButton.setHovered(reactionButton.contains(x,y)) ||
                         memoryButton.setHovered(memoryButton.contains(x,y)) ||
@@ -94,6 +126,9 @@ function drawCountdown(){                              // 倒计时画面（居�
 }
 
 function start(){                                      // 主页面“开始”点击：倒计时逻辑
+    // 标记离开主菜单
+    window.isSchulteStartScreen = false;
+    
     if(bgMusic.paused) bgMusic.play();                 // 确保背景音乐播放
     canvas.onclick=null; canvas.onmousemove=null;      // 禁用主页面事件
     countdownValue=3;                                  // 倒计时从 3 开始

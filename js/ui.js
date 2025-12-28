@@ -96,6 +96,7 @@ class CanvasDialog{                                     // 弹窗组件（标题
         this.prevOnClick = canvas.onclick;
         this.prevOnMouseMove = canvas.onmousemove;
         this.active=true; this.callback=callback; this.cancelCallback=cancelCallback;
+        this.showTime = performance.now(); // 记录显示时间
         this.animateIn();
     }
     animateIn(){                                        // 淡入动画逻辑
@@ -106,6 +107,9 @@ class CanvasDialog{                                     // 弹窗组件（标题
     }
     bindClick(){                                       // 绑定点击与悬停事件
         canvas.onclick=(e)=>{                           // 点击事件
+            // 防止误触：显示后 500ms 内不响应点击
+            if (performance.now() - this.showTime < 500) return;
+
             const {x,y}=windowToCanvas(canvas,e.clientX,e.clientY); // 坐标换算
             if(!this.active) return;                    // 未激活忽略
             if(this.okButton.isClicked(x,y)){
