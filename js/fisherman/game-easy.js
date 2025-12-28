@@ -343,7 +343,7 @@ function drawScene(){
   let hy = hook.y + Math.cos(hook.angle) * hook.length;
 
   ctx.strokeStyle = isNightMode ? '#ECEFF1' : '#263238';
-  ctx.lineWidth=4; 
+  ctx.lineWidth = 6; // Thicker line
   ctx.beginPath();
   ctx.moveTo(hook.x, hook.y);
   ctx.lineTo(hx, hy);
@@ -354,20 +354,49 @@ function drawScene(){
   ctx.translate(hx, hy);
   ctx.rotate(-hook.angle); // Rotate hook to match line
   
-  ctx.fillStyle = isNightMode ? '#ECEFF1' : '#263238';
+  // Realistic Hook Drawing
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = isNightMode ? '#CFD8DC' : '#546E7A'; // Metallic grey
+  ctx.lineWidth = 5; // Thicker hook body
+
   ctx.beginPath();
-  ctx.arc(0, 0, 10, 0, Math.PI*2);
+  // Shank (Vertical part)
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, 25); // Longer shank
+  // Bend (Curve)
+  ctx.arc(15, 25, 15, Math.PI, 0, true); // Larger bend
+  // Point (Tip)
+  ctx.lineTo(30, 15); // Longer tip
+  ctx.stroke();
+
+  // Barb (Small spike near tip)
+  ctx.beginPath();
+  ctx.moveTo(30, 15);
+  ctx.lineTo(24, 21); // Larger barb
+  ctx.stroke();
+
+  // Eye (Loop at top)
+  ctx.fillStyle = isNightMode ? '#CFD8DC' : '#546E7A';
+  ctx.beginPath();
+  ctx.arc(0, -3, 5, 0, Math.PI*2); // Larger eye
+  ctx.fill();
+  ctx.fillStyle = isNightMode ? '#263238' : '#FFF'; // Hole
+  ctx.beginPath();
+  ctx.arc(0, -3, 2.5, 0, Math.PI*2); // Larger hole
   ctx.fill();
 
   // If caught fish, draw it here
   if(hook.caughtFish) {
       ctx.save();
+      // Fish hangs from the bend of the hook
+      ctx.translate(15, 30); // Adjusted hang position
       ctx.rotate(Math.PI/2); // Fish hangs vertically
       // Reset fish transform to draw relative to hook
       let f = hook.caughtFish;
       // Temporarily set pos to 0,0 for drawing
       let oldX = f.x, oldY = f.y;
-      f.x = 0; f.y = 15; // Hang slightly below
+      f.x = 0; f.y = 0; 
       drawFish(f);
       f.x = oldX; f.y = oldY;
       ctx.restore();
