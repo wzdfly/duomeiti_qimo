@@ -41,7 +41,12 @@ function drawGameGrid(){                               // 游戏页：绘制网�
             ctx.fillStyle=cellStates[idx]===0 ? (currentTheme==='night'?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.1)") :
                            cellStates[idx]===1 ? "#4CAF50" : "#FF5252";
             roundRect(ctx,x,y,gridSize,gridSize,10,true,true); // 绘制格子
-            ctx.fillStyle=getTextColor('gridNumber'); ctx.font="bold 30px Microsoft YaHei";
+            
+            // 计算自适应字体大小：约为格子大小的 50%
+            const fontSize = Math.floor(gridSize * 0.5);
+            ctx.fillStyle=getTextColor('gridNumber'); 
+            ctx.font=`bold ${fontSize}px Microsoft YaHei`; // 使用动态计算的字体大小
+            
             ctx.textAlign="center"; ctx.textBaseline="middle";
             const shouldShow = !numbersHidden || cellStates[idx]===1;
             if(shouldShow) ctx.fillText(gridNumbers[idx],x+gridSize/2,y+gridSize/2);
@@ -52,7 +57,7 @@ function drawGameGrid(){                               // 游戏页：绘制网�
         const j=flashCellIndex%gridCols;               // 列
         const hx=gridX+j*gridSize; const hy=gridY+i*gridSize; // 高亮坐标
         ctx.save(); ctx.lineWidth=6;                   // 保存状态与设置线宽
-        ctx.strokeStyle="rgba(76,175,80,0.9)";         // 外框颜色（绿）
+        ctx.strokeStyle="rgba(33,150,243,0.9)";         // 外框颜色（蓝色）
         roundRect(ctx,hx-3,hy-3,gridSize+6,gridSize+6,12,false,true); // 外框
         ctx.restore();                                 // 恢复状态
     }
@@ -64,7 +69,7 @@ function drawGameGrid(){                               // 游戏页：绘制网�
     if(currentMode==='memory' && memoryCountdownInterval){ // 记忆预览倒计时显示
         ctx.fillStyle=getTextColor('title'); ctx.font="bold 32px Microsoft YaHei";
         ctx.textAlign="center"; ctx.textBaseline="middle";
-        ctx.fillText(`记忆倒计时: ${memoryCountdownValue}s`, W/2, 100);
+        ctx.fillText(`记忆倒计时: ${memoryCountdownValue}s`, W/2, 40);
     }
     if(!gameBackButton){                               // 首次创建返回按钮
         const backColors = getButtonColors('neutral');
@@ -80,6 +85,14 @@ function drawGameGrid(){                               // 游戏页：绘制网�
     gameRefreshButton.w=120; gameRefreshButton.h=50; gameRefreshButton.draw();    // 绘制刷新按钮
     ctx.fillStyle=getTextColor('timer'); ctx.font="bold 28px Microsoft YaHei"; ctx.textAlign="right";
     ctx.fillText(`计时: ${gameTimer}s`,W-20,30);       // 绘制计时
+
+    if(currentMode==='memory' && numbersHidden){       // 记忆模式且游戏进行中（数字已隐藏）
+        ctx.fillStyle=getTextColor('text'); 
+        ctx.font="bold 48px Microsoft YaHei"; 
+        ctx.textAlign="right";
+        ctx.fillText("按下空格键", W-60, 160);
+        ctx.fillText("可获得提示", W-60, 240);
+    }
 }
 
 function startGameTimer(){                             // 启动游戏计时器（每秒+1）
@@ -166,9 +179,17 @@ function bindGamePageEvents(){                         // 游戏页点击与悬�
                        gameRefreshButton.setHovered(gameRefreshButton.contains(x,y)); // 刷新悬停
         if(changed) animateButtons(()=>drawGameGrid(),[gameBackButton,gameRefreshButton]); // 动画与重绘
     };
+    
+    window.onkeydown=function(e){                      // 键盘事件：记忆模式提示
+        if(currentMode==='memory' && numbersHidden && e.code==='Space'){
+            startFlashNextCell();                      // 闪烁提示下一个格子
+            drawGameGrid();
+        }
+    };
 }
 
 function returnToMainMenu(){                           // 返回主页面（清理状态）
+    window.onkeydown=null;                             // 清理键盘事件
     ctx.clearRect(0,0,W,H);                            // 清空画布
     if(countdownInterval){ clearInterval(countdownInterval); countdownInterval=null; } // 清倒计时
     if(gameInterval){ clearInterval(gameInterval); gameInterval=null; } // 清游戏计时

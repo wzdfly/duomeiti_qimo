@@ -39,9 +39,9 @@ let gameRefreshButton = null;                          // 游戏页“刷新”�
 
 let currentLevel = 1;                                  // 当前关卡：1/2/3
 let levelsSpec = {                                     // 关卡配置
-    1: { rows: 3, cols: 3, size: 120 },
-    2: { rows: 4, cols: 4, size: 100 },
-    3: { rows: 5, cols: 5, size: 90 }
+    1: { rows: 3, cols: 3, size: 180 }, // 120 -> 180
+    2: { rows: 4, cols: 4, size: 140 }, // 100 -> 140
+    3: { rows: 5, cols: 5, size: 120 }  // 90 -> 120
 };
 
 let level1Button = null;                               // 关卡页“第一关”按钮实例

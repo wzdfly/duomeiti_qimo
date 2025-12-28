@@ -93,6 +93,8 @@ class CanvasDialog{                                     // 弹窗组件（标题
         this.callback=null; this.active=false;          // 回调与激活状态
     }
     show(callback, cancelCallback){
+        this.prevOnClick = canvas.onclick;
+        this.prevOnMouseMove = canvas.onmousemove;
         this.active=true; this.callback=callback; this.cancelCallback=cancelCallback;
         this.animateIn();
     }
@@ -111,7 +113,15 @@ class CanvasDialog{                                     // 弹窗组件（标题
             }else if(!this.singleButton && this.cancelButton.isClicked(x,y)){
                 this.active=false;
                 if(typeof this.cancelCallback === 'function'){ this.cancelCallback(); }
-                else { if(this.snapshot) ctx.putImageData(this.snapshot,0,0); bindCurrentPageEvents(); }
+                else { 
+                    if(this.snapshot) ctx.putImageData(this.snapshot,0,0); 
+                    if(typeof bindCurrentPageEvents === 'function') {
+                        bindCurrentPageEvents(); 
+                    } else if (this.prevOnClick) {
+                        canvas.onclick = this.prevOnClick;
+                        if(this.prevOnMouseMove) canvas.onmousemove = this.prevOnMouseMove;
+                    }
+                }
             }
         };
         canvas.onmousemove=(e)=>{                       // 悬停放大
@@ -127,14 +137,18 @@ class CanvasDialog{                                     // 弹窗组件（标题
     draw(){                                            // 绘制弹窗元素
         const ctx=this.ctx;                            // 上下文引用
         if(this.snapshot) ctx.putImageData(this.snapshot,0,0); // 还原底图
-        const dialogTheme2 = getDialogTheme();
-        ctx.fillStyle=`rgba(0,0,0,${dialogTheme2.overlayAlpha*this.opacity})`; ctx.fillRect(0,0,W,H);
-        ctx.fillStyle=`rgba(255,255,255,${this.opacity})`; // 白底
+        const dialogTheme = getDialogTheme();
+        ctx.fillStyle=`rgba(0,0,0,${dialogTheme.overlayAlpha*this.opacity})`; ctx.fillRect(0,0,W,H);
+        
+        ctx.save();
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle=dialogTheme.bg; // 主题背景色
         ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=12; // 阴影
         ctx.shadowOffsetX=0; ctx.shadowOffsetY=4;      // 阴影偏移
         roundRect(ctx,this.x,this.y,this.width,this.height,15,true,true); // 弹窗框
+        ctx.restore();
+        
         ctx.shadowColor="transparent";                 // 关闭阴影
-        const dialogTheme = getDialogTheme();
         const grad=ctx.createLinearGradient(this.x,this.y,this.x,this.y+50);
         grad.addColorStop(0, dialogTheme.titleTop); grad.addColorStop(1, dialogTheme.titleBottom);
         ctx.fillStyle=grad; roundRect(ctx,this.x,this.y,this.width,50,15,true,false); // 标题栏

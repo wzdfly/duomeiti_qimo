@@ -29,9 +29,9 @@ function getButtonColors(kind){
 function getDialogTheme(){
     const t = currentTheme;
     if(t==='night'){
-        return { titleTop:'#546E7A', titleBottom:'#455A64', overlayAlpha:0.6 };
+        return { titleTop:'#546E7A', titleBottom:'#455A64', overlayAlpha:0.6, bg: '#37474F' };
     }
-    return { titleTop:'#FFA726', titleBottom:'#FB8C00', overlayAlpha:0.5 };
+    return { titleTop:'#FFA726', titleBottom:'#FB8C00', overlayAlpha:0.5, bg: '#FFFFFF' };
 }
 
 function setVolume(vol){

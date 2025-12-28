@@ -12,6 +12,13 @@ const FocusGame = {
     items: [],       // 屏幕上的所有物体 {x, y, char, isTarget, angle}
     target: null,    // 目标物体配置 {type, char}
     
+    // 动画状态
+    isLevelTransition: false,
+    animatingItem: null,
+    animatingStart: null,
+    animatingTarget: null,
+    animatingProgress: 0,
+
     // UI 按钮
     backButton: null,
     pauseButton: null,
@@ -48,6 +55,8 @@ const FocusGame = {
         console.log("FocusGame init called", startLevel);
         this.score = 0;
         this.level = startLevel;
+        this.isLevelTransition = false;
+        this.animatingItem = null;
         
         // 确保 layout 对象存在
         if (!this.layout) {
@@ -235,6 +244,28 @@ const FocusGame = {
     },
 
     update: function(dt) {
+        // 动画逻辑
+        if (this.isLevelTransition && this.animatingItem) {
+            this.animatingProgress += dt * 1.5; // 约0.7秒完成
+            if (this.animatingProgress >= 1) {
+                this.animatingProgress = 1;
+                // 动画完成，进入下一关
+                this.score += 10 + this.level * 2;
+                this.level++;
+                this.isLevelTransition = false;
+                this.animatingItem = null;
+                this.startLevel();
+                return;
+            }
+            // 插值更新位置 (Ease In Out)
+            const t = this.animatingProgress;
+            const ease = t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+            
+            this.animatingItem.x = this.animatingStart.x + (this.animatingTarget.x - this.animatingStart.x) * ease;
+            this.animatingItem.y = this.animatingStart.y + (this.animatingTarget.y - this.animatingStart.y) * ease;
+            return; // 动画期间暂停计时
+        }
+
         if (this.timer > 0) {
             this.timer -= dt;
         }
@@ -294,7 +325,7 @@ const FocusGame = {
         ctx.fillStyle = '#333';
         ctx.font = 'bold 36px Microsoft YaHei';
         ctx.fillText("寻找目标", centerX, curY);
-        curY += 80;
+        curY += 100;
 
         // 目标大图标
         if (this.target) {
@@ -341,6 +372,21 @@ const FocusGame = {
             ctx.restore();
         });
         ctx.restore();
+
+        // 单独绘制正在动画的物品 (不受 clip 限制，可以飞出游戏区)
+        if (this.isLevelTransition && this.animatingItem) {
+            const item = this.animatingItem;
+            ctx.save();
+            ctx.translate(item.x, item.y);
+            // 增加旋转特效
+            ctx.rotate(item.angle + this.animatingProgress * Math.PI * 2);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = `${this.config.fontSize}px ${this.config.fontFamily}`;
+            ctx.fillStyle = '#000'; // 保持颜色一致
+            ctx.fillText(item.char, 0, 0);
+            ctx.restore();
+        }
     },
 
     handleClick: function(x, y) {
@@ -373,19 +419,27 @@ const FocusGame = {
     },
 
     checkItem: function(item) {
+        if (this.isLevelTransition) return; // 动画中禁止点击
+
         if (item.isTarget) {
             // 答对了
             this.playAudio('correct');
-            this.score += 10 + this.level * 2;
-            this.level++;
-            // 简单特效或延迟后下一关
-            this.startLevel();
+            
+            // 开始过关动画
+            this.isLevelTransition = true;
+            this.animatingItem = item;
+            // 从主列表中移除，避免重复绘制（动画物品单独绘制）
+            this.items = this.items.filter(i => i !== item);
+            
+            // 设置动画参数
+            this.animatingStart = { x: item.x, y: item.y };
+            // 目标位置：右上角区域 (侧边栏顶部)
+            this.animatingTarget = { x: W - 60, y: 60 }; 
+            this.animatingProgress = 0;
+            
         } else {
             // 答错了
             this.playAudio('wrong');
-            this.timer = Math.max(0, this.timer - 3); // 扣时惩罚
-            // 可以添加一个错误震动效果
-            this.shakeScreen();
         }
     },
     
@@ -441,13 +495,6 @@ const FocusGame = {
         }
     },
     
-    shakeScreen: function() {
-        // 简单的震动反馈（如果支持）
-        if (navigator.vibrate) {
-            navigator.vibrate(200);
-        }
-        // 也可以实现 Canvas 震动效果，暂时略过
-    },
 
     // 暂停游戏
     pauseGame: function() {
