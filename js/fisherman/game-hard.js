@@ -440,22 +440,114 @@ function drawScene(){
     
     ctx.restore();
   }
-  ctx.strokeStyle = isNightMode ? '#ECEFF1' : '#263238';
-  ctx.lineWidth=4; // Thicker line
-  
+  // Draw Hook Line
   // Calculate end point
   let endX = hook.x + Math.sin(hook.angle) * hook.length;
   let endY = hook.y + Math.cos(hook.angle) * hook.length;
+
+  ctx.strokeStyle = isNightMode ? '#ECEFF1' : '#263238';
+  ctx.lineWidth = 6; // Thicker line
 
   ctx.beginPath();
   ctx.moveTo(hook.x, hook.y);
   ctx.lineTo(endX, endY);
   ctx.stroke();
   
-  ctx.fillStyle = isNightMode ? '#ECEFF1' : '#263238';
+  // Draw Hook Head
+  ctx.save();
+  ctx.translate(endX, endY);
+  ctx.rotate(-hook.angle); // Rotate hook to match line
+  
+  // Realistic Hook Drawing
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = isNightMode ? '#CFD8DC' : '#546E7A'; // Metallic grey
+  ctx.lineWidth = 5; // Thicker hook body
+
   ctx.beginPath();
-  ctx.arc(endX, endY, 10, 0, Math.PI*2); // Larger hook
+  // Shank (Vertical part)
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, 25); // Longer shank
+  // Bend (Curve)
+  ctx.arc(15, 25, 15, Math.PI, 0, true); // Larger bend
+  // Point (Tip)
+  ctx.lineTo(30, 15); // Longer tip
+  ctx.stroke();
+
+  // Barb (Small spike near tip)
+  ctx.beginPath();
+  ctx.moveTo(30, 15);
+  ctx.lineTo(24, 21); // Larger barb
+  ctx.stroke();
+
+  // Eye (Loop at top)
+  ctx.fillStyle = isNightMode ? '#CFD8DC' : '#546E7A';
+  ctx.beginPath();
+  ctx.arc(0, -3, 5, 0, Math.PI*2); // Larger eye
   ctx.fill();
+  ctx.fillStyle = isNightMode ? '#263238' : '#FFF'; // Hole
+  ctx.beginPath();
+  ctx.arc(0, -3, 2.5, 0, Math.PI*2); // Larger hole
+  ctx.fill();
+
+  // If caught fish, draw it here
+  if(hook.caughtFish) {
+      ctx.save();
+      // Fish hangs from the bend of the hook
+      ctx.translate(15, 30); // Adjusted hang position
+      ctx.rotate(Math.PI/2); // Fish hangs vertically
+      // Reset fish transform to draw relative to hook
+      let f = hook.caughtFish;
+      // Temporarily set pos to 0,0 for drawing
+      let oldX = f.x, oldY = f.y;
+      f.x = 0; f.y = 0; 
+      // Draw function depends on type
+      if(f.type==='fish'){
+          // Use inline fish drawer or external function? 
+          // Game hard uses inline logic inside loop above, let's copy the inline logic here or use a helper
+          // But wait, game-hard draws fishes in the loop. 
+          // We need to re-draw the caught fish AT the hook position.
+          // Let's use the same drawing logic as in the main loop but simplified
+          ctx.fillStyle='#ff7043';
+          ctx.beginPath();
+          ctx.ellipse(0,0,f.radius,f.radius*0.6,0,0,Math.PI*2);
+          ctx.fill();
+          ctx.fillStyle='#ef6c00';
+          ctx.beginPath();
+          ctx.moveTo(-f.radius,f.radius*0.1);
+          ctx.lineTo(-f.radius-12,0);
+          ctx.lineTo(-f.radius,f.radius*-0.1);
+          ctx.closePath();
+          ctx.fill();
+      } else if(f.type==='turtle'){
+        ctx.fillStyle='#43A047'; 
+        ctx.beginPath(); ctx.ellipse(0,0,f.radius,f.radius*0.7,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#66BB6A';
+        ctx.beginPath(); ctx.arc(f.radius,0,f.radius*0.4,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#388E3C';
+        ctx.beginPath(); ctx.arc(-f.radius*0.5,-f.radius*0.6,8,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(f.radius*0.5,-f.radius*0.6,8,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-f.radius*0.5,f.radius*0.6,8,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(f.radius*0.5,f.radius*0.6,8,0,Math.PI*2); ctx.fill();
+      } else if(f.type==='puffer'){
+        ctx.fillStyle='#AB47BC'; 
+        ctx.beginPath(); ctx.arc(0,0,f.radius,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#7B1FA2';
+        ctx.lineWidth=2;
+        for(let i=0;i<8;i++){
+            const a=i*(Math.PI*2)/8;
+            const sx=Math.cos(a)*f.radius;
+            const sy=Math.sin(a)*f.radius;
+            const ex=Math.cos(a)*(f.radius+8);
+            const ey=Math.sin(a)*(f.radius+8);
+            ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.stroke();
+        }
+      }
+
+      f.x = oldX; f.y = oldY;
+      ctx.restore();
+  }
+  ctx.restore();
 }
 
 function drawHUD(){
