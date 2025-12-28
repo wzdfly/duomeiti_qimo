@@ -60,8 +60,8 @@ function showStartButtonCentered(){                    // 爆炸后显示模式�
 
     canvas.onclick = function(e){
         const {x,y} = windowToCanvas(canvas, e.clientX, e.clientY);
-        if(reactionButton.isClicked(x,y)) { currentMode='reaction'; start(); }
-        else if(memoryButton.isClicked(x,y)) { currentMode='memory'; startMemoryMode(); }
+        if(reactionButton.isClicked(x,y)) { currentLevel=1; currentMode='reaction'; start(); }
+        else if(memoryButton.isClicked(x,y)) { currentLevel=1; currentMode='memory'; startMemoryMode(); }
         else if(achievementsButton.isClicked(x,y)) showLevels();
         else if(backMainButton.isClicked(x,y)) showGamesPage();
     };
